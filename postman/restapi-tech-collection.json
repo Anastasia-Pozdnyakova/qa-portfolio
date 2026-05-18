@@ -1,0 +1,132 @@
+{
+  "info": {
+    "_postman_id": "5000d0d3-0622-474a-a447-a3aef92cbc1d",
+    "name": "RestAPI Tech Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "26485417"
+  },
+  "item": [
+    {
+      "name": "TC-01 GET all companies",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Проверка, что в headers есть Content-Type со значением application/json",
+              "pm.test(\"Content-Type is application/json\", function () {",
+              "    pm.response.to.have.header(\"Content-Type\");",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+              "});",
+              "",
+              "// Проверка, что приходят ключи data и meta ",
+              "pm.test(\"Response contains data and meta\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"data\");",
+              "    pm.expect(jsonData).to.have.property(\"meta\");",
+              "});",
+              "",
+              "// Проверка, что data – массив",
+              "pm.test(\"Data is in array\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.be.an(\"array\");",
+              "});",
+              "",
+              "pm.test(\"Response time is less than 500ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{BASE_URL}}/companies",
+          "host": [
+            "{{BASE_URL}}"
+          ],
+          "path": [
+            "companies"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "TC-02 GET companies with limit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Проверка, что в headers есть Content-Type со значением application/json",
+              "pm.test(\"Content-Type is application/json\", function () {",
+              "    pm.response.to.have.header(\"Content-Type\");",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+              "});",
+              "",
+              "// Проверка, что meta.limit равен тому, что передали в запросе",
+              "pm.test(\"meta.limit equals requested limit\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.meta.limit).to.equal(parseInt(pm.request.url.query.get(\"limit\")));",
+              "});",
+              "",
+              "// Проверка, что компаний в data не больше limit",
+              "pm.test(\"Number of companies is not greater than limit\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    const limit = parseInt(pm.request.url.query.get(\"limit\"));",
+              "    pm.expect(jsonData.data.length).to.be.at.most(limit);",
+              "});",
+              "",
+              "// Проверка, что data – массив",
+              "pm.test(\"Data is in array\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.be.an(\"array\");",
+              "});",
+              "",
+              "pm.test(\"Response time is less than 500ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{BASE_URL}}/companies?limit=5",
+          "host": [
+            "{{BASE_URL}}"
+          ],
+          "path": [
+            "companies"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
