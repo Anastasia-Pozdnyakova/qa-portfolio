@@ -33,3 +33,19 @@ def test_tc01_get_companies_structure():
         ]
         for field in required_fields:
             assert field in first_company, f"У компании нет поля {field}"
+
+
+def test_tc02_get_companies_with_limit():
+    """ТС-02: Параметр limit ограничивает количество компаний"""
+    limit_value = 5
+    response = requests.get(f"{BASE_URL}/companies", params={"limit": limit_value})
+
+    # Проверка 1: статус 200
+    assert response.status_code == 200
+
+    # Проверка 2: в meta.limit пришло то, что запросили
+    data = response.json()
+    assert data["meta"]["limit"] == limit_value
+
+    # Проверка 3: количество компаний в data не больше limit
+    assert len(data["data"]) <= limit_value
