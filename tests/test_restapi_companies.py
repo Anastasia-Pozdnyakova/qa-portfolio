@@ -77,11 +77,7 @@ def test_tc02_get_companies_with_limit():
     assert (
         response.status_code == 200
     ), f"Ожидался статус 200, но получен {response.status_code}"
-
-    # Проверка Content-Type
     validate_content_type(response)
-
-    # Парсинг JSON
     data = get_validated_json(response)
 
     # Проверка meta.limit
@@ -115,3 +111,26 @@ def test_tc03_get_companies_with_offset():
     # Главная проверка пагинации
     actual_company_id = data["data"][0]["company_id"]
     assert expected_company_id == actual_company_id
+
+
+def test_tc04_get_companies_filter_by_active_status():
+    """TC-04: Фильтрация компаний по статусу ACTIVE"""
+    status_value = "ACTIVE"
+    response = requests.get(f"{BASE_URL}/companies", params={"status": status_value})
+
+    assert (
+        response.status_code == 200
+    ), f"Ожидался статус 200, но получен {response.status_code}"
+    validate_content_type(response)
+    data = get_validated_json(response)
+    validate_response_structure(data, ["data", "meta"])
+
+    # Проверка, что список компаний не пустой
+    companies = data["data"]
+    assert len(companies) > 0, "Нет компаний со статусом ACTIVE"
+
+    # Проверка, что у всех компаний статус ACTIVE
+    for company in companies:
+        assert (
+            company["company_status"] == status_value
+        ), f"Ожидался статус ACTIVE, получен {company['company_status']}"

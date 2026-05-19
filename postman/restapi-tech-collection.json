@@ -13,31 +13,26 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test(\"Status code is 200\", function () {",
-              "    pm.response.to.have.status(200);",
+              "// ========== Базовые проверки ==========",
+              "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+              "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+              ");",
+              "",
+              "// ========== Проверка структуры ==========",
+              "pm.test(\"Структура ответа: data (массив) и meta (объект)\", () => {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property(\"data\");",
+              "    pm.expect(response).to.have.property(\"meta\");",
+              "    pm.expect(response.data).to.be.an(\"array\");",
+              "    pm.expect(response.meta).to.be.a(\"object\");",
               "});",
               "",
-              "// Проверка, что в headers есть Content-Type со значением application/json",
-              "pm.test(\"Content-Type is application/json\", function () {",
-              "    pm.response.to.have.header(\"Content-Type\");",
-              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
-              "});",
-              "",
-              "// Проверка, что приходят ключи data и meta ",
-              "pm.test(\"Response contains data and meta\", function () {",
-              "    const jsonData = pm.response.json();",
-              "    pm.expect(jsonData).to.have.property(\"data\");",
-              "    pm.expect(jsonData).to.have.property(\"meta\");",
-              "});",
-              "",
-              "// Проверка, что data – массив",
-              "pm.test(\"Data is in array\", function () {",
-              "    const jsonData = pm.response.json();",
-              "    pm.expect(jsonData.data).to.be.an(\"array\");",
-              "});",
-              "",
-              "pm.test(\"Response time is less than 500ms\", function () {",
-              "    pm.expect(pm.response.responseTime).to.be.below(500);",
+              "// ========== Проверка наличия компаний ==========",
+              "pm.test(\"Список компаний не пустой\", () => {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.data.length).to.be.greaterThan(0, \"Нет компаний\");",
               "});"
             ],
             "type": "text/javascript",
@@ -68,37 +63,32 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test(\"Status code is 200\", function () {",
-              "    pm.response.to.have.status(200);",
+              "// ========== Базовые проверки ==========",
+              "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+              "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+              ");",
+              "",
+              "// ========== Проверка структуры ==========",
+              "pm.test(\"Структура ответа: data (массив) и meta (объект)\", () => {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property(\"data\");",
+              "    pm.expect(response).to.have.property(\"meta\");",
+              "    pm.expect(response.data).to.be.an(\"array\");",
+              "    pm.expect(response.meta).to.be.a(\"object\");",
               "});",
               "",
-              "// Проверка, что в headers есть Content-Type со значением application/json",
-              "pm.test(\"Content-Type is application/json\", function () {",
-              "    pm.response.to.have.header(\"Content-Type\");",
-              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+              "// ========== Проверка параметра limit ==========",
+              "pm.test(\"meta.limit равен запрошенному limit\", () => {",
+              "    const response = pm.response.json();",
+              "    const requestedLimit = parseInt(pm.request.url.query.get(\"limit\"));",
+              "    pm.expect(response.meta.limit).to.equal(requestedLimit);",
               "});",
               "",
-              "// Проверка, что meta.limit равен тому, что передали в запросе",
-              "pm.test(\"meta.limit equals requested limit\", function () {",
-              "    const jsonData = pm.response.json();",
-              "    pm.expect(jsonData.meta.limit).to.equal(parseInt(pm.request.url.query.get(\"limit\")));",
-              "});",
-              "",
-              "// Проверка, что компаний в data не больше limit",
-              "pm.test(\"Number of companies is not greater than limit\", function () {",
-              "    const jsonData = pm.response.json();",
-              "    const limit = parseInt(pm.request.url.query.get(\"limit\"));",
-              "    pm.expect(jsonData.data.length).to.be.at.most(limit);",
-              "});",
-              "",
-              "// Проверка, что data – массив",
-              "pm.test(\"Data is in array\", function () {",
-              "    const jsonData = pm.response.json();",
-              "    pm.expect(jsonData.data).to.be.an(\"array\");",
-              "});",
-              "",
-              "pm.test(\"Response time is less than 500ms\", function () {",
-              "    pm.expect(pm.response.responseTime).to.be.below(500);",
+              "pm.test(\"Количество компаний в data не больше meta.limit\", () => {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.data.length).to.be.at.most(response.meta.limit);",
               "});"
             ],
             "type": "text/javascript",
@@ -122,6 +112,126 @@
             {
               "key": "limit",
               "value": "5"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "TC-03 GET companies with offset",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// ========== Базовые проверки ==========",
+              "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+              "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+              ");",
+              "",
+              "// ========== Проверка структуры ==========",
+              "pm.test(\"Структура ответа: data (массив) и meta (объект)\", () => {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property(\"data\");",
+              "    pm.expect(response).to.have.property(\"meta\");",
+              "    pm.expect(response.data).to.be.an(\"array\");",
+              "    pm.expect(response.meta).to.be.a(\"object\");",
+              "});",
+              "",
+              "// ========== Проверка параметра offset ==========",
+              "pm.test(\"meta.offset равен запрошенному offset\", () => {",
+              "    const response = pm.response.json();",
+              "    const requestedOffset = parseInt(pm.request.url.query.get(\"offset\"));",
+              "    pm.expect(response.meta.offset).to.equal(requestedOffset);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{BASE_URL}}/companies?offset=2",
+          "host": [
+            "{{BASE_URL}}"
+          ],
+          "path": [
+            "companies"
+          ],
+          "query": [
+            {
+              "key": "offset",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "TC-04 GET companies with status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// ========== Базовые проверки ==========",
+              "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+              "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+              "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+              ");",
+              "",
+              "// ========== Проверка структуры ==========",
+              "pm.test(\"Структура ответа: data (массив) и meta (объект)\", () => {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property(\"data\");",
+              "    pm.expect(response).to.have.property(\"meta\");",
+              "    pm.expect(response.data).to.be.an(\"array\");",
+              "    pm.expect(response.meta).to.be.a(\"object\");",
+              "});",
+              "",
+              "// ========== Проверка фильтрации status=ACTIVE ==========",
+              "pm.test(\"Список компаний не пустой\", () => {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.data.length).to.be.greaterThan(0, \"Нет компаний со статусом ACTIVE\");",
+              "});",
+              "",
+              "pm.test(\"Компании фильтруются по status=ACTIVE\", () => {",
+              "    const response = pm.response.json();",
+              "    response.data.forEach(data => {",
+              "        pm.expect(data.company_status).to.equal(\"ACTIVE\");",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{BASE_URL}}/companies?status=ACTIVE",
+          "host": [
+            "{{BASE_URL}}"
+          ],
+          "path": [
+            "companies"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "ACTIVE"
             }
           ]
         }
