@@ -20,20 +20,17 @@
 
 ---
 
-## 📁 Структура проекта
+## 🗂 Структура проекта
 
-qa-portfolio/
-├── tests/
-│ └── test_restapi_companies.py
-├── postman/
-│ └── restapi-tech-collection.json
-├── test-cases/
-│ └── GET_companies.md
-├── assets/
-│ └── pytest_result.png
-├── .gitignore
-├── LICENSE
-└── README.md
+| Путь | Описание |
+|------|----------|
+| `tests/test_restapi_companies.py` | pytest автотесты |
+| `postman/restapi-tech-collection.json` | Postman коллекция |
+| `test-cases/GET_companies.md` | Тест-кейсы |
+| `assets/pytest_result.png` | Скриншот результатов |
+| `.gitignore` | Исключённые файлы |
+| `LICENSE` | Лицензия MIT |
+| `README.md` | Документация |
 
 ---
 
@@ -112,8 +109,9 @@ TC-04 — Фильтрация по статусу (status=ACTIVE)
 
 ---
 
-## 📊 Пример вывода тестов
+## ✅ Пример вывода тестов
 
+```bash
 collected 4 items
 
 test_tc01_get_all_companies PASSED
@@ -122,10 +120,11 @@ test_tc03_get_companies_with_offset PASSED
 test_tc04_get_companies_filter_by_active_status PASSED
 
 ============================== 4 passed in 0.35s ==============================
+```
 
 ---
 
-## 📝 Примечания
+## 📋 Примечания
 
 1. Перед запуском тестов убедитесь, что API доступно по указанному BASE_URL.
 
