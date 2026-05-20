@@ -1,7 +1,14 @@
 # QA — Backend Autotests
 
-Автоматизированные тесты для проверки REST API бэкенда. Проект демонстрирует навыки автоматизации тестирования на Python (pytest) и Postman, а также работу с GitHub для хранения и демонстрации портфолио.
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![pytest](https://img.shields.io/badge/pytest-passing-brightgreen.svg)](https://pytest.org)
 
+Портфолио с автотестами для тестирования REST API (restapi.tech).  
+Проверяются GET-запросы с параметрами `limit`, `offset`, `status`.  
+Тесты написаны на pytest + requests, коллекция Postman прилагается.
+
+---
 
 ## 🔧 Технологии
 
@@ -11,20 +18,24 @@
 * **Postman** — инструмент для ручного и автоматизированного тестирования API (коллекция тестов на JavaScript).
 * **GitHub** — платформа для хранения кода и демонстрации портфолио.
 
+---
 
 ## 📁 Структура проекта
 
 qa-portfolio/
 ├── tests/
-│ └── test_restapi_companies.py # pytest автотесты
+│ └── test_restapi_companies.py
 ├── postman/
-│ └── restapi-tech-collection.json # коллекция Postman
+│ └── restapi-tech-collection.json
 ├── test-cases/
-│ └── GET_companies.md # документация тест‑кейсов
+│ └── GET_companies.md
+├── assets/
+│ └── pytest_result.png
 ├── .gitignore
+├── LICENSE
 └── README.md
 
-
+---
 
 ## 🚀 Запуск автотестов (pytest)
 
@@ -58,6 +69,8 @@ pytest tests/ -v -s
 pytest tests/ --html=report.html
 ```
 
+---
+
 ## 📮 Postman коллекция
 
 Как импортировать и настроить:
@@ -75,36 +88,42 @@ BASE_URL = https://restapi.tech/api
 
 1. Запросы к эндпоинтам API.
 
-2. Автоматизированные проверки на JavaScript (статус‑код, время ответа, структура JSON, валидация данных).
+2. Автоматизированные проверки на JavaScript.
+
+---
 
 ## 🧪 Тест‑кейсы для эндпоинта api/companies
 
 TC-01 — Получение всех компаний
+
 статус 200, структура data/meta, Content-Type, JSON
 
 TC-02 — Ограничение количества (limit=5)
+
 meta.limit = 5, длина data ≤ limit
 
 TC-03 — Пагинация (offset=2)
-meta.offset = 2, сдвиг списка (первая компания после сдвига = третья без сдвига)
+
+meta.offset = 2, сдвиг списка
 
 TC-04 — Фильтрация по статусу (status=ACTIVE)
+
 возвращаются только компании со статусом ACTIVE
 
+---
 
 ## 📊 Пример вывода тестов
 
-============================= test session starts =============================
-platform linux -- Python 3.10.0, pytest-7.0.0, pluggy-1.0.0
-rootdir: /qa-portfolio
 collected 4 items
 
-tests/test_restapi_companies.py::test_tc01_get_all_companies PASSED
-tests/test_restapi_companies.py::test_tc02_get_companies_with_limit PASSED
-tests/test_restapi_companies.py::test_tc03_get_companies_with_offset PASSED
-tests/test_restapi_companies.py::test_tc04_get_companies_filter_by_active_status PASSED
+test_tc01_get_all_companies PASSED
+test_tc02_get_companies_with_limit PASSED
+test_tc03_get_companies_with_offset PASSED
+test_tc04_get_companies_filter_by_active_status PASSED
 
 ============================== 4 passed in 0.35s ==============================
+
+---
 
 ## 📝 Примечания
 
@@ -114,12 +133,21 @@ tests/test_restapi_companies.py::test_tc04_get_companies_filter_by_active_status
 
 3. При изменении эндпоинтов обновите соответствующие тест‑кейсы в test-cases/.
 
+---
+
+## 📄 Лицензия
+
+Проект распространяется под лицензией MIT.
+
+---
+
 ## 🔗 Ссылка на портфолио
 
-[Anastasia Pozdnyakova](https://github.com/Anastasia-Pozdnyakova/qa-portfolio)
+https://github.com/Anastasia-Pozdnyakova/qa-portfolio
+
 ---
 
 📫 Контакты
 GitHub: [Anastasia-Pozdnyakova](https://github.com/Anastasia-Pozdnyakova)
-Email: poznast59@ya.ru
 Telegram: [@poznast](https://t.me/@poznast)
+Email: poznast59@ya.ru
