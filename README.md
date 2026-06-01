@@ -103,24 +103,15 @@ TC-03 — Пагинация (offset=2)
 
 meta.offset = 2, сдвиг списка
 
-TC-04 — Фильтрация по статусу (status=ACTIVE)
+TC-05 — Проверка корректности ошибки при невалидном статусе (status=INVALID)
 
-возвращаются только компании со статусом ACTIVE
+detail — массив с описанием ошибки
 
 ---
 
-## ✅ Пример вывода тестов
+## 📸 Результаты тестов
 
-```bash
-collected 4 items
-
-test_tc01_get_all_companies PASSED
-test_tc02_get_companies_with_limit PASSED
-test_tc03_get_companies_with_offset PASSED
-test_tc04_get_companies_filter_by_active_status PASSED
-
-============================== 4 passed in 0.35s ==============================
-```
+![Результаты pytest](assets/pytest_results.png)
 
 ---
 
@@ -150,7 +141,3 @@ https://github.com/Anastasia-Pozdnyakova/qa-portfolio
 GitHub: [Anastasia-Pozdnyakova](https://github.com/Anastasia-Pozdnyakova)
 Telegram: [@poznast](https://t.me/@poznast)
 Email: poznast59@ya.ru
-
-## 📸 Результаты тестов
-
-![Результаты pytest](assets/pytest_results.png)
