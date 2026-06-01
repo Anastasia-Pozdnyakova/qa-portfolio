@@ -5,18 +5,18 @@
 [![pytest](https://img.shields.io/badge/pytest-passing-brightgreen.svg)](https://pytest.org)
 
 Портфолио с автотестами для тестирования REST API (restapi.tech).  
-Проверяются GET-запросы с параметрами `limit`, `offset`, `status`.  
 Тесты написаны на pytest + requests, коллекция Postman прилагается.
 
 ---
 
 ## 🔧 Технологии
 
-* **Python 3.10+** — основной язык программирования.
-* **pytest** — фреймворк для написания и запуска тестов.
-* **requests** — библиотека для выполнения HTTP‑запросов.
-* **Postman** — инструмент для ручного и автоматизированного тестирования API (коллекция тестов на JavaScript).
-* **GitHub** — платформа для хранения кода и демонстрации портфолио.
+- **Python 3.10+** — основной язык программирования
+- **pytest** — фреймворк для написания и запуска тестов
+- **requests** — библиотека для выполнения HTTP‑запросов
+- **Postman** — инструмент для ручного и автоматизированного тестирования API
+- **SQLite** — планируется (проверка данных через БД)
+- **GitHub** — платформа для хранения портфолио
 
 ---
 
@@ -24,10 +24,10 @@
 
 | Путь | Описание |
 |------|----------|
-| `tests/test_restapi_companies.py` | pytest автотесты |
+| `tests/test_restapi_companies.py` | pytest автотесты для `/companies` |
 | `postman/restapi-tech-collection.json` | Postman коллекция |
-| `test-cases/GET_companies.md` | Тест-кейсы |
-| `assets/pytest_result.png` | Скриншот результатов |
+| `test-cases/GET_companies.md` | Тест-кейсы для `/companies` |
+| `assets/pytest_results.png` | Скриншот результатов |
 | `.gitignore` | Исключённые файлы |
 | `LICENSE` | Лицензия MIT |
 | `README.md` | Документация |
@@ -89,23 +89,24 @@ BASE_URL = https://restapi.tech/api
 
 ---
 
-## 🧪 Тест‑кейсы для эндпоинта api/companies
+## 🧪 Покрытие тестами
 
-TC-01 — Получение всех компаний
-
-статус 200, структура data/meta, Content-Type, JSON
-
-TC-02 — Ограничение количества (limit=5)
-
-meta.limit = 5, длина data ≤ limit
-
-TC-03 — Пагинация (offset=2)
-
-meta.offset = 2, сдвиг списка
-
-TC-05 — Проверка корректности ошибки при невалидном статусе (status=INVALID)
-
-detail — массив с описанием ошибки
+GET /api/companies
+TC	Проверка	Ожидаемый статус	Статус
+TC-01	Базовый GET (структура, поля)	200	✅ готов
+TC-02	Параметр limit=5	200	✅ готов
+TC-03	Пагинация offset=2	200	✅ готов
+TC-04	Фильтрация status=ACTIVE	200	✅ готов
+TC-05	Невалидный status=INVALID	422	✅ готов
+TC-06	Граничный limit=0	200	✅ готов
+TC-07	Невалидный limit=abc	422	✅ готов
+TC-08	Граничный offset=-1	200	✅ готов
+🔜 В планах
+Эндпоинт	Методы	Что планируется	Статус
+/companies/{id}	GET	Позитивные и негативные тесты	📋 планируется
+/users	GET, POST, PUT, DELETE	CRUD-тесты	📋 планируется
+/auth	POST, GET	Авторизация, получение токена	📋 планируется
+SQL	—	Проверка данных через SQLite	📋 планируется
 
 ---
 
