@@ -150,3 +150,7 @@ https://github.com/Anastasia-Pozdnyakova/qa-portfolio
 GitHub: [Anastasia-Pozdnyakova](https://github.com/Anastasia-Pozdnyakova)
 Telegram: [@poznast](https://t.me/@poznast)
 Email: poznast59@ya.ru
+
+## 📸 Результаты тестов
+
+![Результаты pytest](assets/pytest_results.png)
