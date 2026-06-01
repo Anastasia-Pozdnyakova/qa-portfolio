@@ -5,28 +5,25 @@
 
 import requests
 import json
+import constants
 
-# ========== Константы ==========
+# ========== Настройки ==========
 BASE_URL = "https://restapi.tech/api"
-COMPANY_REQUIRED_FIELDS = [
-    "company_id",
-    "company_name",
-    "company_address",
-    "company_status",
-]
+TIMEOUT = 5
+COMPANIES_ENDPOINT = f"{BASE_URL}/companies"
 
 
 # ========== Вспомогательные функции ==========
 def validate_content_type(response, expected_type="application/json"):
-    """Проверяет заголовок Content-Type."""
-    content_type = response.headers.get("Content-Type")
-    assert (
-        expected_type in content_type
+    """Проверяет заголовок Content-Type"""
+    content_type = response.headers.get("Content-Type", "")
+    assert content_type.startswith(
+        expected_type
     ), f"Content-Type некорректен: '{content_type}'. Ожидался '{expected_type}'"
 
 
 def get_validated_json(response):
-    """Проверяет, что ответ — валидный JSON, и возвращает распарсенные данные."""
+    """Проверяет, что ответ — валидный JSON, и возвращает распарсенные данные"""
     try:
         data = response.json()
         return data
@@ -35,102 +32,216 @@ def get_validated_json(response):
 
 
 def validate_response_structure(data, required_keys):
-    """Проверяет наличие обязательных полей в ответе."""
+    """Проверяет наличие обязательных полей в ответе"""
     for key in required_keys:
         assert key in data, f"Отсутствует поле '{key}'"
-
-
-def validate_company_fields(company, required_fields):
-    """Проверяет обязательные поля у компании."""
-    for field in required_fields:
-        assert field in company, f"У компании нет поля '{field}'"
 
 
 # ========== Тесты ==========
 def test_tc01_get_all_companies():
     """TC-01: Базовый GET-запрос на получение всех компаний"""
-    response = requests.get(f"{BASE_URL}/companies")
 
-    assert (
-        response.status_code == 200
-    ), f"Ожидался статус 200, но получен {response.status_code}"
+    # Отправка GET-запроса
+    try:
+        response = requests.get(COMPANIES_ENDPOINT, timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
 
-    # Проверка Content-Type
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 200, (
+        f"Запрос к {COMPANIES_ENDPOINT} вернул статус {response.status_code}. "
+        f"Ожидался 200"
+    )
     validate_content_type(response)
-
-    # Парсинг JSON
     data = get_validated_json(response)
 
     # Проверка структуры ответа
     validate_response_structure(data, ["data", "meta"])
 
-    # Если список не пуст, проверяем поля первой компании
-    if len(data["data"]) > 0:
-        validate_company_fields(data["data"][0], COMPANY_REQUIRED_FIELDS)
+    companies = data["data"]
+    assert companies, "Массив 'data' пуст"
+
+    # Валидация обязательных полей первой компании
+    for field in constants.COMPANY_REQUIRED_FIELDS:
+        assert field in companies[0], f"В компании отсутствует поле '{field}'"
 
 
 def test_tc02_get_companies_with_limit():
     """ТС-02: Параметр limit ограничивает количество компаний"""
-    limit_value = 5
-    response = requests.get(f"{BASE_URL}/companies", params={"limit": limit_value})
 
-    assert (
-        response.status_code == 200
-    ), f"Ожидался статус 200, но получен {response.status_code}"
+    # Подготовка данных
+    limit_value = 5
+
+    # Отправка GET-запроса с limit
+    try:
+        response = requests.get(
+            COMPANIES_ENDPOINT, params={"limit": limit_value}, timeout=TIMEOUT
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 200, (
+        f"Запрос к {COMPANIES_ENDPOINT} с параметрами {{'limit': {limit_value}}} "
+        f"вернул статус {response.status_code}. Ожидался 200"
+    )
     validate_content_type(response)
     data = get_validated_json(response)
 
-    # Проверка meta.limit
+    # Проверка, что meta.limit соответствует запросу
     assert data["meta"]["limit"] == limit_value
 
-    # Количество компаний в data не больше limit
-    assert len(data["data"]) <= limit_value
+    # Проверка, что количество компаний в data не больше limit
+    companies = data["data"]
+    assert companies, "Массив 'data' пуст"
+    assert len(companies) <= limit_value
 
 
 def test_tc03_get_companies_with_offset():
     """ТС-03: Параметр offset сдвигает количество компаний"""
+
+    # Подготовак данных
     offset_value = 2
+    limit_value = 3  # по умолчанию limit=3 в API
 
-    # Контрольный запрос без offset и парсинг JSON
-    response_base = requests.get(f"{BASE_URL}/companies")
-    base_data = get_validated_json(response_base)
+    # Отправка GET-запроса с offset и limit=1 — получаем только одну компанию на позиции offset
+    try:
+        response = requests.get(
+            COMPANIES_ENDPOINT,
+            params={"offset": offset_value, "limit": limit_value},
+            timeout=TIMEOUT,
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
 
-    # ID компании, которая должна стать первой после сдвига
-    expected_company_id = base_data["data"][offset_value]["company_id"]
-
-    # Запрос с offset
-    response = requests.get(f"{BASE_URL}/companies", params={"offset": offset_value})
-
-    assert (
-        response.status_code == 200
-    ), f"Ожидался статус 200, но получен {response.status_code}"
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 200, (
+        f"Запрос к {COMPANIES_ENDPOINT} с параметрами {{'offset': {offset_value}, 'limit': {limit_value}}} "
+        f"вернул статус {response.status_code}. Ожидался 200"
+    )
+    validate_content_type(response)
     data = get_validated_json(response)
-    assert data["meta"]["offset"] == offset_value
-    assert len(data["data"]) > 0
 
-    # Главная проверка пагинации
-    actual_company_id = data["data"][0]["company_id"]
-    assert expected_company_id == actual_company_id
+    # Проверка структуры ответа
+    validate_response_structure(data, ["data", "meta"])
+
+    companies = data["data"]
+    meta = data["meta"]
+
+    # Проверка полей meta
+    assert (
+        meta["offset"] == offset_value
+    ), f"meta.offset={meta['offset']}, но ожидался {offset_value}"
+    assert (
+        meta["limit"] == limit_value
+    ), f"meta.limit={meta['limit']}, но ожидался {limit_value}"
+
+    # Если offset >= total, массив может быть пустым
+    total_companies = meta["total"]
+    if offset_value >= total_companies:
+        assert not companies, (
+            f"При offset={offset_value} (total={total_companies}) ожидался пустой массив, "
+            f"но получен {len(companies)} компаний."
+        )
+        return
+
+    # Проверка, что количество компаний не превышает limit
+    assert (
+        len(companies) <= limit_value
+    ), f"Количество компаний ({len(companies)}) превышает limit={limit_value}"
+
+    # Проверка наличия компаний (если offset в пределах total)
+    if companies:
+        # Валидация обязательных полей первой компании
+        for field in constants.COMPANY_REQUIRED_FIELDS:
+            assert field in companies[0], f"В компании отсутствует поле '{field}'"
+
+    # Проверка соответствия ID компании позиции offset
+    # В ответе API первая компания при offset=2 имеет company_id=3
+    actual_company_id = companies[0]["company_id"]
+
+    # Получаем ожидаемый ID из константы
+    expected_company_id = offset_value + 1
+
+    assert actual_company_id == expected_company_id, (
+        f"Компания на позиции offset={offset_value} некорректна. "
+        f"Ожидался ID {expected_company_id}, получен {actual_company_id}"
+    )
 
 
 def test_tc04_get_companies_filter_by_active_status():
     """TC-04: Фильтрация компаний по статусу ACTIVE"""
-    status_value = "ACTIVE"
-    response = requests.get(f"{BASE_URL}/companies", params={"status": status_value})
 
-    assert (
-        response.status_code == 200
-    ), f"Ожидался статус 200, но получен {response.status_code}"
+    # Подготовка данных
+    status_value = "ACTIVE"
+
+    # Отправка GET-запроса со статусом
+    try:
+        response = requests.get(
+            COMPANIES_ENDPOINT, params={"status": status_value}, timeout=TIMEOUT
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 200, (
+        f"Запрос к {COMPANIES_ENDPOINT} с параметрами {{'status': {status_value}}} "
+        f"вернул статус {response.status_code}. Ожидался 200"
+    )
     validate_content_type(response)
     data = get_validated_json(response)
+
+    # Проверка структуры ответа
     validate_response_structure(data, ["data", "meta"])
 
-    # Проверка, что список компаний не пустой
     companies = data["data"]
-    assert len(companies) > 0, "Нет компаний со статусом ACTIVE"
+    assert companies, f"Массив 'data' пуст, нет компаний со статусом {status_value}"
 
-    # Проверка, что у всех компаний статус ACTIVE
+    # Проверка, что у всех компаний статус соответствует запросу
     for company in companies:
         assert (
             company["company_status"] == status_value
-        ), f"Ожидался статус ACTIVE, получен {company['company_status']}"
+        ), f"Ожидался статус {status_value}, получен {company['company_status']}"
+
+
+def test_tc05_invalid_status_returns_422():
+    """TC-05: Проверка корректности ошибки при невалидном статусе"""
+
+    # Подготовка данных
+    status_value = "INVALID"
+
+    # Отправка GET-запроса
+    try:
+        response = requests.get(
+            COMPANIES_ENDPOINT, params={"status": status_value}, timeout=TIMEOUT
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса и заголовка
+    assert response.status_code == 422, (
+        f"Запрос к {COMPANIES_ENDPOINT} с параметрами {{'status': status_value}} "
+        f"вернул статус {response.status_code}. Ожидался 422"
+    )
+    validate_content_type(response)
+
+    # Парсинг JSON
+    error_data = get_validated_json(response)
+
+    # Проверка структуры detail
+    assert "detail" in error_data, "В ответе отсутствует поле 'detail'"
+    detail = error_data["detail"]
+    assert isinstance(detail, list), "detail должен быть массивом"
+    assert detail, "detail пуст"
+
+    # Извлекаем первую ошибку
+    first_error = detail[0]
+
+    # Проверка обязательных полей ошибки
+    for field in ["type", "loc", "msg"]:
+        assert field in first_error, f"В ошибке отсутствует поле '{field}'"
+
+    # Проверка, что сообщение об ошибке содержит упоминание допустимых статусов
+    assert any(
+        status in first_error["msg"] for status in constants.VALID_STATUSES
+    ), f"Сообщение об ошибке не содержит ни одного из допустимых статусов: {constants.VALID_STATUSES}"
