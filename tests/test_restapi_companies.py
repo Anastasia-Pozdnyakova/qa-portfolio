@@ -100,11 +100,11 @@ def test_tc02_get_companies_with_limit():
 def test_tc03_get_companies_with_offset():
     """ТС-03: Параметр offset сдвигает количество компаний"""
 
-    # Подготовак данных
+    # Подготовка данных
     offset_value = 2
     limit_value = 3  # по умолчанию limit=3 в API
 
-    # Отправка GET-запроса с offset и limit=1 — получаем только одну компанию на позиции offset
+    # Отправка GET-запроса
     try:
         response = requests.get(
             COMPANIES_ENDPOINT,
@@ -149,18 +149,14 @@ def test_tc03_get_companies_with_offset():
     assert (
         len(companies) <= limit_value
     ), f"Количество компаний ({len(companies)}) превышает limit={limit_value}"
+    assert companies, f"data пустой массив"
 
-    # Проверка наличия компаний (если offset в пределах total)
-    if companies:
-        # Валидация обязательных полей первой компании
-        for field in constants.COMPANY_REQUIRED_FIELDS:
-            assert field in companies[0], f"В компании отсутствует поле '{field}'"
+    # Проверка наличия компаний
+    for field in constants.COMPANY_REQUIRED_FIELDS:
+        assert field in companies[0], f"В компании отсутствует поле '{field}'"
 
-    # Проверка соответствия ID компании позиции offset
-    # В ответе API первая компания при offset=2 имеет company_id=3
+    # ГЛАВНАЯ ПРОВЕРКА: компания на позиции offset имеет ID = offset + 1
     actual_company_id = companies[0]["company_id"]
-
-    # Получаем ожидаемый ID из константы
     expected_company_id = offset_value + 1
 
     assert actual_company_id == expected_company_id, (
@@ -326,3 +322,51 @@ def test_tc07_limit_abc_returns_422():
 
 def test_tc08_offset_negative_one_returns_no_shift():
     """TC-08: offset=-1 возвращает статус 200, компании без сдвига"""
+
+    # Подготовка данных
+    offset_value = -1
+    limit_value = 3  # по умолчанию limit=3 в API
+
+    # Отправка GET-запроса
+    try:
+        response = requests.get(
+            COMPANIES_ENDPOINT,
+            params={"offset": offset_value, "limit": limit_value},
+            timeout=TIMEOUT,
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 200, (
+        f"Запрос к {COMPANIES_ENDPOINT} с параметрами {{'offset': {offset_value}, 'limit': {limit_value}}} "
+        f"вернул статус {response.status_code}. Ожидался 200"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры ответа
+    validate_response_structure(data, ["data", "meta"])
+
+    companies = data["data"]
+    meta = data["meta"]
+
+    # Проверка полей meta
+    assert (
+        meta["offset"] == offset_value
+    ), f"meta.offset={meta['offset']}, но ожидался {offset_value}"
+    assert (
+        meta["limit"] == limit_value
+    ), f"meta.limit={meta['limit']}, но ожидался {limit_value}"
+
+    # Проверка, что массив с компаниями не пустой
+    assert companies, f"data пустой массив"
+
+    # Проверка обязательных полей в компании
+    for field in constants.COMPANY_REQUIRED_FIELDS:
+        assert field in companies[0], f"В компании отсутствует поле '{field}'"
+
+    # ГЛАВНАЯ ПРОВЕРКА: компании без сдвига
+    assert (
+        companies[0]["company_id"] == 1
+    ), f"Ожидался ID=1, получен {companies[0]['company_id']}, при offset={offset_value} произошел сдвиг"
