@@ -232,7 +232,7 @@ def test_tc05_invalid_status_returns_422():
     assert "detail" in error_data, "В ответе отсутствует поле 'detail'"
     detail = error_data["detail"]
     assert isinstance(detail, list), "detail должен быть массивом"
-    assert detail, "detail пуст"
+    assert len(detail) > 0, "detail пуст"
 
     # Извлекаем первую ошибку
     first_error = detail[0]
@@ -245,3 +245,84 @@ def test_tc05_invalid_status_returns_422():
     assert any(
         status in first_error["msg"] for status in constants.VALID_STATUSES
     ), f"Сообщение об ошибке не содержит ни одного из допустимых статусов: {constants.VALID_STATUSES}"
+
+
+def test_tc06_limit_zero_returns_empty_data():
+    """TC-06: limit=0 возвращает статус 200 и пустой массив data"""
+
+    # Подготовка данных
+    limit_value = 0
+
+    # Отправка GET-запроса
+    try:
+        response = requests.get(
+            COMPANIES_ENDPOINT, params={"limit": limit_value}, timeout=TIMEOUT
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка парсинг JSON
+    assert response.status_code == 200, (
+        f"Запрос к {COMPANIES_ENDPOINT} с параметром {{'limit': {limit_value}}} "
+        f"вернул статус {response.status_code}. Ожидался 200"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры data
+    validate_response_structure(data, ["data", "meta"])
+
+    # Проверка, что limit=0
+    limit = data["meta"]["limit"]
+    assert limit == limit_value, f"'limit' равен {limit}, а должно быть {limit_value}"
+
+    # Проверка, что data пустой
+    companies = data["data"]
+    assert isinstance(companies, list), "'data' должен быть массивом"
+    assert not companies, f"Массив 'data' не пустой"
+
+
+def test_tc07_limit_abc_returns_422():
+    """TC-07: limit=abc возвращает статус 422 и detail об ошибке"""
+
+    # Подготовка данных
+    limit_value = "abc"
+
+    # Отправка GET-запроса
+    try:
+        response = requests.get(
+            COMPANIES_ENDPOINT, params={"limit": limit_value}, timeout=TIMEOUT
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса и заголовка
+    assert response.status_code == 422, (
+        f"Запрос к {COMPANIES_ENDPOINT} с параметром {{'limit': {limit_value}}} "
+        f"вернул статус {response.status_code}. Ожидался 422"
+    )
+    validate_content_type(response)
+
+    # Парсинг JSON
+    error_data = get_validated_json(response)
+
+    # Проверка, что в ответе есть detail, массив и не пустой
+    assert "detail" in error_data, "В ответе отсутствует поле 'detail'"
+    detail = error_data["detail"]
+    assert isinstance(detail, list), "detail должен быть массивом"
+    assert len(detail) > 0, "detail пуст"
+
+    # Извлекаем первую ошибку
+    first_error = detail[0]
+
+    # Проверка обязательных полей
+    for field in ["type", "loc", "msg"]:
+        assert field in first_error, f"В ошибке отсутствует {field}"
+
+    # Проверка типа поля ошибки и содержание
+    assert isinstance(first_error["msg"], str), "Поле 'msg' не строка"
+    assert "integer" in first_error["msg"], "Сообщение об ошибке не содержит 'integer'"
+
+
+def test_tc08_offset_negative_one_returns_no_shift():
+    """TC-08: offset=-1 возвращает статус 200, компании без сдвига"""

@@ -145,7 +145,4 @@ https://github.com/Anastasia-Pozdnyakova/qa-portfolio
 
 ---
 
-📫 Контакты
-GitHub: [Anastasia-Pozdnyakova](https://github.com/Anastasia-Pozdnyakova)
-Telegram: [@poznast](https://t.me/@poznast)
-Email: poznast59@ya.ru
+📫 **Контакты:** GitHub [Anastasia-Pozdnyakova](https://github.com/Anastasia-Pozdnyakova) · Telegram [@poznast](https://t.me/@poznast) · Email poznast59@ya.ru
