@@ -10,7 +10,7 @@
       "name": "Companies",
       "item": [
         {
-          "name": "TC-01 GET all companies",
+          "name": "TC-01 All companies",
           "event": [
             {
               "listen": "test",
@@ -60,7 +60,7 @@
           "response": []
         },
         {
-          "name": "TC-02 GET companies limit=5",
+          "name": "TC-02 Companies limit=5",
           "event": [
             {
               "listen": "test",
@@ -122,7 +122,7 @@
           "response": []
         },
         {
-          "name": "TC-03 GET companies offset=2",
+          "name": "TC-03 Companies offset=2",
           "event": [
             {
               "listen": "test",
@@ -179,7 +179,7 @@
           "response": []
         },
         {
-          "name": "TC-04 GET companies status=ACTIVE",
+          "name": "TC-04 Companies status=ACTIVE",
           "event": [
             {
               "listen": "test",
@@ -242,7 +242,7 @@
           "response": []
         },
         {
-          "name": "TC-05 GET companies status=INVALID (422)",
+          "name": "TC-05 Companies status=INVALID (422)",
           "event": [
             {
               "listen": "test",
@@ -272,13 +272,12 @@
                   "    pm.expect(error.msg).to.be.a(\"string\");",
                   "});",
                   "",
-                  "pm.test(\"Текст ошибки содержит статусы\", () => {",
+                  "pm.test(\"Текст ошибки содержит хотя бы один статус\", () => {",
                   "    const response = pm.response.json();",
                   "    const errorMsg = response.detail[0].msg;",
-                  "    const containStatus = errorMsg.includes(\"ACTIVE\") ||",
-                  "                          errorMsg.includes(\"CLOSED\") ||",
-                  "                          errorMsg.includes(\"BANKRUPT\");",
-                  "    pm.expect(containStatus).to.be.true;",
+                  "    const expectedStatuses = [\"ACTIVE\", \"CLOSED\", \"BANKRUPT\"];",
+                  "    const containValidStatus = expectedStatuses.some(status => errorMsg.includes(status));",
+                  "    pm.expect(containValidStatus).to.be.true;",
                   "});"
                 ],
                 "type": "text/javascript",
@@ -309,7 +308,7 @@
           "response": []
         },
         {
-          "name": "TC-06 GET companies limit=0",
+          "name": "TC-06 Companies limit=0",
           "event": [
             {
               "listen": "test",
@@ -363,7 +362,7 @@
           "response": []
         },
         {
-          "name": "TC-07 GET companies limit=abc (422)",
+          "name": "TC-07 Companies limit=abc (422)",
           "event": [
             {
               "listen": "test",
@@ -376,7 +375,7 @@
                   "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
                   ");",
                   "",
-                  "// ========== Проверка структуры текста ошибки ==========",
+                  "// ========== Проверка структуры ошибки ==========",
                   "pm.test(\"detail присутствует, массив, не пустой\", () => {",
                   "    const response = pm.response.json();",
                   "    pm.expect(response).to.have.property(\"detail\");",
@@ -396,7 +395,7 @@
                   "pm.test(\"Текст ошибки содержит указание валидного типа\", () => {",
                   "    const response = pm.response.json();",
                   "    const errorMsg = response.detail[0].msg;",
-                  "    pm.expect(errorMsg).to.be.include(\"integer\");",
+                  "    pm.expect(errorMsg).to.include(\"integer\");",
                   "});"
                 ],
                 "type": "text/javascript",
@@ -427,7 +426,7 @@
           "response": []
         },
         {
-          "name": "TC-08 GET companies offset=-1",
+          "name": "TC-08 Companies offset=-1",
           "event": [
             {
               "listen": "test",
@@ -484,6 +483,249 @@
                   "key": "offset",
                   "value": "-1"
                 }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Companies/{id}",
+      "item": [
+        {
+          "name": "TC-09 Company by id=1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ==========",
+                  "pm.test(\"Проверка наличия полей\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"company_id\");",
+                  "    pm.expect(response).to.have.property(\"company_name\");",
+                  "    pm.expect(response).to.have.property(\"company_address\");",
+                  "    pm.expect(response).to.have.property(\"company_status\");",
+                  "    pm.expect(response).to.have.property(\"description_lang\");",
+                  "});",
+                  "",
+                  "// ========== Проверка тип полей ==========",
+                  "pm.test(\"Проверка типа полей\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.company_id).to.be.a(\"number\");",
+                  "    pm.expect(response.company_name).to.be.a(\"string\");",
+                  "    pm.expect(response.company_address).to.be.a(\"string\");",
+                  "    pm.expect(response.company_status).to.be.a(\"string\");",
+                  "    pm.expect(response.description_lang).to.be.an(\"array\");",
+                  "});",
+                  "",
+                  "// ========== Проверка массива description_lang ==========",
+                  "pm.test(\"Проверка наличия и типа полей в массиве description_lang\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.description_lang.length).to.be.greaterThan(0);",
+                  "",
+                  "    response.description_lang.forEach(item => {",
+                  "        pm.expect(item).to.have.property(\"translation_lang\");",
+                  "        pm.expect(item).to.have.property(\"translation\");",
+                  "        pm.expect(item.translation_lang).to.be.a(\"string\");",
+                  "        pm.expect(item.translation).to.be.a(\"string\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/companies/1",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "companies",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-10 Company by id=1 (Accept-Language RU)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ответа ==========",
+                  "pm.test(\"Проверка наличия полей\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"company_id\");",
+                  "    pm.expect(response).to.have.property(\"company_name\");",
+                  "    pm.expect(response).to.have.property(\"company_address\");",
+                  "    pm.expect(response).to.have.property(\"company_status\");",
+                  "    pm.expect(response).to.have.property(\"description\");",
+                  "});",
+                  "",
+                  "// ========== Проверка description ==========",
+                  "pm.test(\"Проверка description\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.description).to.be.a(\"string\");",
+                  "    pm.expect(response.description.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка отсутствия description_lang ==========",
+                  "pm.test(\"Проверка отсутствия description_lang\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.not.have.property(\"description_lang\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "RU",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/companies/1",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "companies",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-11 Non-existent company id=9999 (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"Структура ошибки корректна\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.have.property(\"reason\");",
+                  "    pm.expect(response.detail.reason).to.be.a(\"string\"); ",
+                  "    pm.expect(response.detail.reason.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/companies/9999",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "companies",
+                "9999"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-12 Invalid company id=abc (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"detail присутствует, массив, не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"array\");",
+                  "    pm.expect(response.detail.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "pm.test(\"detail содержит обязательные поля валидных типов\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const error = response.detail[0];",
+                  "    pm.expect(error).to.include.keys(\"type\",\"loc\", \"msg\");",
+                  "    pm.expect(error.type).to.be.a(\"string\");",
+                  "    pm.expect(error.loc).to.be.an(\"array\");",
+                  "    pm.expect(error.msg).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "pm.test(\"Текст ошибки содержит указание валидного типа\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const errorMsg = response.detail[0].msg;",
+                  "    pm.expect(errorMsg).to.include(\"integer\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/companies/abc",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "companies",
+                "abc"
               ]
             }
           },
