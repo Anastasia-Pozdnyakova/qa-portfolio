@@ -10,3 +10,9 @@ COMPANY_REQUIRED_FIELDS = [
 
 # Допустимые статусы
 VALID_STATUSES = ["ACTIVE", "CLOSED", "BANKRUPT"]
+
+# Поля переводов в description_lang
+TRANSLATION_REQUIRED_FIELDS = [
+    "translation_lang",
+    "translation",
+]

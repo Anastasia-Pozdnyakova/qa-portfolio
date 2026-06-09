@@ -25,8 +25,10 @@
 | Путь | Описание |
 |------|----------|
 | `tests/test_restapi_companies.py` | pytest автотесты для `/companies` |
+| `tests/test_restapi_companies_by_id.py` | pytest автотесты для `/companies/{id}` |
 | `postman/restapi-tech-collection.json` | Postman коллекция |
 | `test-cases/GET_companies.md` | Тест-кейсы для `/companies` |
+| `test-cases/GET_companies_by_id.md` | Тест-кейсы для `/companies/{id}` |
 | `assets/pytest_results.png` | Скриншот результатов |
 | `.gitignore` | Исключённые файлы |
 | `LICENSE` | Лицензия MIT |
@@ -104,7 +106,7 @@ BASE_URL = https://restapi.tech/api
 | TC-07 | Невалидный `limit=abc` | 422 | ✅ готов |
 | TC-08 | Граничный `offset=-1` | 200 | ✅ готов |
 
-### GET /api/companies
+### GET /api/companies/id
 
 | TC | Проверка | Ожидаемый статус | Статус |
 |----|----------|------------------|--------|
