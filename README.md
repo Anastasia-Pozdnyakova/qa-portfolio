@@ -15,7 +15,7 @@
 - **pytest** — фреймворк для написания и запуска тестов
 - **requests** — библиотека для выполнения HTTP‑запросов
 - **Postman** — инструмент для ручного и автоматизированного тестирования API
-- **SQLite** — планируется (проверка данных через БД)
+- **SQLite** — проверка данных через БД
 - **GitHub** — платформа для хранения портфолио
 
 ---
@@ -26,6 +26,7 @@
 |------|----------|
 | `tests/test_restapi_companies.py` | pytest автотесты для `/companies` |
 | `tests/test_restapi_companies_by_id.py` | pytest автотесты для `/companies/{id}` |
+| `tests/test_api_sql.py` | тесты интеграции API + SQLite |
 | `postman/restapi-tech-collection.json` | Postman коллекция |
 | `test-cases/GET_companies.md` | Тест-кейсы для `/companies` |
 | `test-cases/GET_companies_by_id.md` | Тест-кейсы для `/companies/{id}` |
@@ -110,10 +111,18 @@ BASE_URL = https://restapi.tech/api
 
 | TC | Проверка | Ожидаемый статус | Статус |
 |----|----------|------------------|--------|
-| TC-01 | Получение компании id=1 (без Accept-Language) | 200 | ✅ готов |
-| TC-02 | Получение компании с заголовком Accept-Language: RU | 200 | ✅ готов |
-| TC-03 | Несуществующий id=9999 | 404 | ✅ готов |
-| TC-04 | Невалидный id=abc | 422 | ✅ готов |
+| TC-09 | Получение компании id=1 (без Accept-Language) | 200 | ✅ готов |
+| TC-10 | Получение компании с заголовком Accept-Language: RU | 200 | ✅ готов |
+| TC-11 | Несуществующий id=9999 | 404 | ✅ готов |
+| TC-12 | Невалидный id=abc | 422 | ✅ готов |
+
+### 🗄️ SQL + API интеграция
+
+| Тест | Проверка | Статус |
+|------|----------|--------|
+| `test_sql_with_api_companies` | Сохранение одной компании в БД | ✅ готов |
+| `test_sql_save_all_companies` | Сохранение всех компаний в БД | ✅ готов |
+| `test_sql_filter_active_companies` | Фильтрация по статусу в SQL | ✅ готов |
 
 ---
 
@@ -123,7 +132,6 @@ BASE_URL = https://restapi.tech/api
 |----------|--------|-----------------|--------|
 | `/users` | GET, POST, PUT, DELETE | CRUD-тесты | 📋 планируется |
 | `/auth` | POST, GET | Авторизация, получение токена | 📋 планируется |
-| SQL | — | Проверка данных через SQLite | 📋 планируется |
 
 ---
 

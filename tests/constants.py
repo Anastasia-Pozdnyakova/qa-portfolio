@@ -16,3 +16,6 @@ TRANSLATION_REQUIRED_FIELDS = [
     "translation_lang",
     "translation",
 ]
+
+# Поля компании (для SQL)
+COMPANY_SQL_FIELDS = ["id", "name", "address", "status"]
