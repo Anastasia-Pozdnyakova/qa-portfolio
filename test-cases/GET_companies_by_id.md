@@ -1,4 +1,4 @@
-# Автотесты: GET /api/companies/{company_id}
+# Тест-кейсы: GET /api/companies/{company_id}
 
 ## Базовые данные
 - **Endpoint:** `GET {{BASE_URL}}/companies/{company_id}`

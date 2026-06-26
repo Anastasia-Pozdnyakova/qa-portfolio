@@ -149,7 +149,7 @@ def test_tc03_get_companies_with_offset():
     assert (
         len(companies) <= limit_value
     ), f"Количество компаний ({len(companies)}) превышает limit={limit_value}"
-    assert companies, f"data пустой массив"
+    assert companies, "data пустой массив"
 
     # Проверка наличия компаний
     for field in constants.COMPANY_REQUIRED_FIELDS:

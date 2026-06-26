@@ -27,9 +27,11 @@
 | `tests/test_restapi_companies.py` | pytest автотесты для `/companies` |
 | `tests/test_restapi_companies_by_id.py` | pytest автотесты для `/companies/{id}` |
 | `tests/test_api_sql.py` | тесты интеграции API + SQLite |
+| `tests/test_restapi_users.py` | pytest автотесты для `/users` |
 | `postman/restapi-tech-collection.json` | Postman коллекция |
 | `test-cases/GET_companies.md` | Тест-кейсы для `/companies` |
 | `test-cases/GET_companies_by_id.md` | Тест-кейсы для `/companies/{id}` |
+| `test-cases/GET_users.md` | Тест-кейсы для `/users` |
 | `assets/pytest_results.png` | Скриншот результатов |
 | `.gitignore` | Исключённые файлы |
 | `LICENSE` | Лицензия MIT |
@@ -123,6 +125,15 @@ BASE_URL = https://restapi.tech/api
 | `test_sql_with_api_companies` | Сохранение одной компании в БД | ✅ готов |
 | `test_sql_save_all_companies` | Сохранение всех компаний в БД | ✅ готов |
 | `test_sql_filter_active_companies` | Фильтрация по статусу в SQL | ✅ готов |
+
+### GET /api/users
+
+| TC | Проверка | Ожидаемый статус | Статус |
+|----|----------|------------------|--------|
+| TC-13 | Базовый GET (структура, поля) | 200 | ✅ готов |
+| TC-14 | Параметр `limit=5` | 200 | ✅ готов |
+| TC-15 | Параметр `offset=2` | 200 | ✅ готов |
+| TC-16 | Невалидный `limit=abc` | 422 | ✅ готов |
 
 ---
 

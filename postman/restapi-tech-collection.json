@@ -732,6 +732,294 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "TC-13 All users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ответа==========",
+                  "pm.test(\"Структура ответа содержит meta и data\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"meta\");",
+                  "    pm.expect(response).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "// ========== Содержание meta ==========",
+                  "pm.test(\"meta содержит total, limit, offset\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const meta = response.meta;",
+                  "    pm.expect(meta).to.have.property('total');",
+                  "    pm.expect(meta).to.have.property('limit');",
+                  "    pm.expect(meta).to.have.property('offset');",
+                  "    pm.expect(meta.total).to.be.a('number');",
+                  "    pm.expect(meta.limit).to.be.a('number');",
+                  "    pm.expect(meta.offset).to.be.a('number');",
+                  "});",
+                  "",
+                  "// ========== data массив и не пустой ==========",
+                  "pm.test(\"data массив и не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const data = response.data;",
+                  "    pm.expect(data).to.be.an('array');",
+                  "    pm.expect(data.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка полей пользователя ==========",
+                  "pm.test(\"Проверка обязательных полей пользователя\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const user = response.data[0];",
+                  "    pm.expect(user).to.have.property('last_name');",
+                  "    pm.expect(user).to.have.property('user_id');",
+                  "    pm.expect(user.last_name).to.be.a('string');",
+                  "    pm.expect(user.user_id).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-14 Users limit=5",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ответа==========",
+                  "pm.test(\"Структура ответа содержит meta и data\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"meta\");",
+                  "    pm.expect(response).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "// ========== Содержание meta ==========",
+                  "pm.test(\"meta содержит total, limit, offset\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const meta = response.meta;",
+                  "    pm.expect(meta).to.have.property('total');",
+                  "    pm.expect(meta).to.have.property('limit');",
+                  "    pm.expect(meta).to.have.property('offset');",
+                  "    pm.expect(meta.total).to.be.a('number');",
+                  "    pm.expect(meta.limit).to.be.a('number');",
+                  "    pm.expect(meta.offset).to.be.a('number');",
+                  "});",
+                  "",
+                  "// ========== data массив и не пустой ==========",
+                  "pm.test(\"data массив и не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const data = response.data;",
+                  "    pm.expect(data).to.be.an('array');",
+                  "    pm.expect(data.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка, что limit равен запрошенному ==========",
+                  "pm.test(\"limit равен запрошенному\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const requestedLimited = parseInt(pm.request.url.query.get(\"limit\"));",
+                  "    pm.expect(response.meta.limit).to.equal(requestedLimited);",
+                  "});",
+                  "",
+                  "pm.test(\"Количество пользователей не более limit\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.data.length).to.be.at.most(response.meta.limit);",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users?limit=5",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-15 Users offset=2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ответа==========",
+                  "pm.test(\"Структура ответа содержит meta и data\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"meta\");",
+                  "    pm.expect(response).to.have.property(\"data\");",
+                  "});",
+                  "",
+                  "// ========== Содержание meta ==========",
+                  "pm.test(\"meta содержит total, limit, offset\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const meta = response.meta;",
+                  "    pm.expect(meta).to.have.property('total');",
+                  "    pm.expect(meta).to.have.property('limit');",
+                  "    pm.expect(meta).to.have.property('offset');",
+                  "    pm.expect(meta.total).to.be.a('number');",
+                  "    pm.expect(meta.limit).to.be.a('number');",
+                  "    pm.expect(meta.offset).to.be.a('number');",
+                  "});",
+                  "",
+                  "// ========== data массив и не пустой ==========",
+                  "pm.test(\"data массив и не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const data = response.data;",
+                  "    pm.expect(data).to.be.an('array');",
+                  "    pm.expect(data.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка, что offset равен запрошенному ==========",
+                  "pm.test(\"offset равен запрошенному\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const requestedOffset = parseInt(pm.request.url.query.get(\"offset\"));",
+                  "    pm.expect(response.meta.offset).to.equal(requestedOffset);",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users?offset=2",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "2",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-16 Users limit=abc (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"detail — массив, не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"array\");",
+                  "    pm.expect(response.detail.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "pm.test(\"Ошибка содержит msg с упоминанием integer\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const errorMsg = response.detail[0].msg;",
+                  "    pm.expect(errorMsg).to.include(\"integer\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users?limit=abc",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "abc",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
