@@ -6,11 +6,13 @@
 import requests
 import json
 import constants
+import pytest
 
 # ========== Настройки ==========
 BASE_URL = "https://restapi.tech/api"
 TIMEOUT = 5
 USERS_ENDPOINT = f"{BASE_URL}/users"
+COMPANIES_ENDPOINT = f"{BASE_URL}/companies"
 
 
 # ========== Вспомогательные функции ==========
@@ -35,6 +37,32 @@ def validate_response_structure(data, required_keys):
     """Проверяет наличие обязательных полей в ответе"""
     for key in required_keys:
         assert key in data, f"Отсутствует поле '{key}'"
+
+
+# ========== Фикстуры ==========
+@pytest.fixture
+def create_user():
+    """Фикстура для создания нового юзера + получения данных + очистка БД после теста"""
+
+    user_data = constants.create_unique_user()
+
+    try:
+        response = requests.post(USERS_ENDPOINT, json=user_data, timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        pytest.fail(f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
+
+    assert response.status_code == 201, f"Ожидался 201, получен {response.status_code}"
+    full_user = get_validated_json(response)
+
+    # Отдаём данные создания и результат
+    yield {"data": user_data, "response": full_user}
+
+    # Очистка
+    user_id = full_user["user_id"]
+    # Чекаем, существует ли ещё пользователь и удаляем
+    check = requests.get(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
+    if check.status_code == 200:
+        requests.delete(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
 
 
 # ========== Тесты ==========
@@ -178,3 +206,169 @@ def test_tc16_limit_abc_returns_422():
     error_msg = first_error["msg"]
     assert isinstance(error_msg, str), "Поле 'msg' не строка"
     assert "integer" in error_msg, "Сообщение об ошибке не содержит 'integer'"
+
+
+def test_tc17_create_user_valid(create_user):
+    """TC-17: Создание юзера с валидаными данными"""
+
+    # Подготовка данных (исходные данные и результат)
+    user_data = create_user["data"]
+    user = create_user["response"]
+
+    validate_response_structure(user, constants.USER_REQUIRED_FIELDS)
+    assert isinstance(user["user_id"], int), "Поле user_id не число"
+    assert isinstance(user["last_name"], str), "Поле last_name не строка"
+
+    assert user["last_name"] == user_data["last_name"], (
+        f"Ожидалось в поле 'last_name' {user_data['last_name']}, "
+        f"а получено {user['last_name']}"
+    )
+
+
+def test_tc18_create_user_no_last_name():
+    """TC-18: Создание юзера без обязательного поля last_name возвращает статус 422"""
+
+    # Подготовка данных
+    invalid_user = {"first_name": "Sydney", "company_id": 3}
+
+    # Отправка POST-запроса
+    try:
+        response = requests.post(USERS_ENDPOINT, json=invalid_user, timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 422, (
+        f"Запрос к {USERS_ENDPOINT} вернул статус {response.status_code}. "
+        f"Ожидался 422"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры
+    assert "detail" in data, "В ответе отсутствует поле detail"
+    assert isinstance(data["detail"], list), "detail не массив"
+    assert len(data["detail"]) > 0, "Массив detail пуст"
+
+    # Берем первую ошибку
+    first_error = data["detail"][0]
+
+    # Проверка обязательных полей
+    for field in ["type", "loc", "msg"]:
+        assert field in first_error, f"Нет поля {field} в ответе"
+
+    # Проверка типа поля ошибки и содержание
+    assert isinstance(first_error["loc"], list), "loc не массив"
+    assert isinstance(first_error["msg"], str), "msg не строка"
+
+    assert (
+        "last_name" in first_error["loc"]
+    ), "loc не содержит упоминание о месте ошибки – поле last_name"
+    assert (
+        "required" in first_error["msg"]
+    ), "msg не содержит упоминание об обязательности поля – required"
+
+
+def test_tc19_create_user_invalid_company():
+    """TC-19: Создание юзера на несуществующую компанию возвращает статус 404"""
+
+    # Подготовка данных
+    invalid_company_id = 9999
+    user = {
+        "first_name": "Sydney",
+        "last_name": "Sweeney",
+        "company_id": invalid_company_id,
+    }
+
+    # Отправка POST-запроса
+    try:
+        response = requests.post(USERS_ENDPOINT, json=user, timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 404, (
+        f"Запрос к {USERS_ENDPOINT} вернул статус {response.status_code}. "
+        f"Ожидался 404"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры ошибки
+    assert "detail" in data, "В ответе отсутствует поле detail"
+    detail = data["detail"]
+    assert isinstance(detail, dict), "detail должен быть объектом (dict)"
+
+    assert "reason" in detail, "В detail отсутствует поле reason"
+    reason = detail["reason"]
+    assert isinstance(reason, str), "reason должен быть строкой"
+    assert len(reason) > 0, "reason не должна быть пустой"
+    assert (
+        str(invalid_company_id) in reason
+    ), f"reason не содержит упоминание о невалидном ID {invalid_company_id}"
+
+
+def test_tc20_create_user_inactive_company():
+    """TC-20: Создание юзера на неактивную компанию возвращает статус 400"""
+
+    # Подготовка данных
+    status_value = "CLOSED"
+
+    # Отправка GET-запроса на получение компании со статусом CLOSED
+    try:
+        response_companies = requests.get(
+            COMPANIES_ENDPOINT, params={"status": status_value}, timeout=TIMEOUT
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON первого запроса
+    assert response_companies.status_code == 200, (
+        f"Запрос к {COMPANIES_ENDPOINT} с параметрами status={status_value} "
+        f"вернул статус {response_companies.status_code}. Ожидался 200"
+    )
+    validate_content_type(response_companies)
+    data_companies = get_validated_json(response_companies)
+
+    companies = data_companies["data"]
+
+    # Если нет CLOSED компаний — пропускаем тест
+    if not companies:
+        pytest.skip("Нет компаний со статусом CLOSED")
+
+    # Берем id первой компании
+    first_company_id = companies[0]["company_id"]
+
+    # Подготовка данных для второго запроса
+    user = {
+        "first_name": "Sydney",
+        "last_name": "Sweeney",
+        "company_id": first_company_id,
+    }
+
+    # Отправка POST-запроса
+    try:
+        response_user = requests.post(USERS_ENDPOINT, json=user, timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response_user.status_code == 400, (
+        f"Запрос к {USERS_ENDPOINT} вернул статус {response_user.status_code}. "
+        f"Ожидался 400"
+    )
+    validate_content_type(response_user)
+    data = get_validated_json(response_user)
+
+    # Проверка структуры ошибки
+    assert "detail" in data, "В ответе отсутствует поле detail"
+    detail = data["detail"]
+    assert isinstance(detail, dict), "detail должен быть объектом (dict)"
+
+    assert "reason" in detail, "В detail отсутствует поле reason"
+    reason = detail["reason"]
+    assert isinstance(reason, str), "reason должен быть строкой"
+    assert len(reason) > 0, "reason не должна быть пустой"
+    assert (
+        "active" in reason.lower()
+    ), f"reason не содержит упоминание о валидном статусе ACTIVE"

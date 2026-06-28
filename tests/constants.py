@@ -1,5 +1,7 @@
 """КОНСТАНТЫ"""
 
+import time
+
 # Поля компании
 COMPANY_REQUIRED_FIELDS = [
     "company_id",
@@ -19,3 +21,26 @@ TRANSLATION_REQUIRED_FIELDS = [
 
 # Поля компании (для SQL)
 COMPANY_SQL_FIELDS = ["id", "name", "address", "status"]
+
+
+# Поля пользователя (обязательные)
+USER_REQUIRED_FIELDS = [
+    "last_name",
+    "user_id",
+]
+
+# Поля пользователя (опциональные)
+USER_OPTIONAL_FIELDS = [
+    "first_name",
+    "company_id",
+]
+
+
+# Данные для POST /users
+def create_unique_user():
+    timestamp = int(time.time())
+    return {
+        "first_name": f"User_{timestamp}",
+        "last_name": f"Test_{timestamp}",
+        "company_id": 3,
+    }

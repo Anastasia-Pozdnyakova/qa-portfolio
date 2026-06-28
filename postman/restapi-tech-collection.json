@@ -1018,6 +1018,323 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "TC-17 Сreate user (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ответа ==========",
+                  "pm.test(\"Есть обязательные поля user_id, last_name\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"user_id\");",
+                  "    pm.expect(response).to.have.property(\"last_name\");",
+                  "    pm.expect(response.user_id).to.be.a(\"number\");",
+                  "    pm.expect(response.last_name).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "// ========== Проверка содержания ==========",
+                  "pm.test(\"Проверка содержания\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.user_id).to.be.greaterThan(0);",
+                  "    pm.expect(response.last_name.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// Сохраняем ID созданного пользователя",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set(\"created_user_id\", response.user_id);",
+                  "    console.log(\"Создан пользователь с ID:\", response.user_id);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Генерируем уникальные данные",
+                  "const timestamp = Date.now();",
+                  "pm.variables.set(\"first_name\", \"User_\" + timestamp);",
+                  "pm.variables.set(\"last_name\", \"Test_\" + timestamp);",
+                  "pm.variables.set(\"company_id\", 3);",
+                  "",
+                  "console.log(\"Результат генерации нового first_name:\", pm.variables.get(\"first_name\"));",
+                  "console.log(\"Результат генерации нового last_name:\", pm.variables.get(\"last_name\"));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"{{first_name}}\",\n  \"last_name\": \"{{last_name}}\",\n  \"company_id\": {{company_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-18 Сreate user no last_name (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"detail – массив, не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"array\");",
+                  "    pm.expect(response.detail.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка обязательных полей ==========",
+                  "pm.test(\"detail содержит обязательные поля валидных типов\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const error = response.detail[0];",
+                  "    pm.expect(error).to.include.keys(\"type\",\"loc\", \"msg\");",
+                  "    pm.expect(error.type).to.be.a(\"string\");",
+                  "    pm.expect(error.loc).to.be.an(\"array\");",
+                  "    pm.expect(error.msg).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ошибки ==========",
+                  "pm.test(\"Текст ошибки содержит подстроку обязательности поля\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const errorLoc = response.detail[0].loc;",
+                  "    const errorMsg = response.detail[0].msg;",
+                  "    pm.expect(errorLoc).to.include(\"last_name\"); // Проверка, что ошибка связана с полем last_name",
+                  "    pm.expect(errorMsg).to.include(\"required\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Sydney\",\n  \"company_id\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-19 Сreate user invalid company (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"Структура ответа\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"object\");",
+                  "    pm.expect(response.detail).to.have.property(\"reason\");",
+                  "    pm.expect(response.detail.reason).to.be.a(\"string\");",
+                  "    pm.expect(response.detail.reason.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ==========",
+                  "pm.test(\"reason содержит ID несуществующей компании\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const reason = response.detail.reason;",
+                  "    pm.expect(reason).to.include('851987');",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Sydney\",\n  \"last_name\": \"Sweeney\",\n  \"company_id\": 851987\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-20 Create user non-active company (400)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Получаем BASE_URL из окружения",
+                  "const baseUrl = pm.environment.get(\"BASE_URL\");",
+                  "",
+                  "// Отправляем запрос на получение списка компаний с статусом CLOSED",
+                  "pm.sendRequest({",
+                  "    url: baseUrl + \"/companies?status=CLOSED\",",
+                  "    method: 'GET',",
+                  "    header: {",
+                  "        'Accept': 'application/json'",
+                  "    }",
+                  "}, function (err, res) {",
+                  "    // Обработка ошибок",
+                  "    if (err) {",
+                  "        console.error(err);",
+                  "        return;",
+                  "    }",
+                  "    // Парсинг ответа",
+                  "    const jsonData = res.json();",
+                  "    // Проверка, что список компаний не пустой",
+                  "    if (jsonData.data && jsonData.data.length > 0) {",
+                  "        // Извлечение ID компании и сохранение в переменную",
+                  "        const closedCompanyId = jsonData.data[0].company_id;",
+                  "        pm.variables.set(\"closed_company_id\", closedCompanyId);",
+                  "        console.log(\"CLOSED company ID:\", closedCompanyId);",
+                  "    } else {",
+                  "        // Если CLOSED компаний нет",
+                  "        pm.variables.set(\"closed_company_id\", 9999);",
+                  "        console.warn(\"Нет CLOSED компаний, используется fallback ID 9999\");",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"Структура ответа\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"object\");",
+                  "    pm.expect(response.detail).to.have.property(\"reason\");",
+                  "    pm.expect(response.detail.reason).to.be.a(\"string\");",
+                  "    pm.expect(response.detail.reason.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ==========",
+                  "pm.test(\"reason упоминает ACTIVE\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const reason = response.detail.reason.toLowerCase();",
+                  "    pm.expect(reason).to.include('active');",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"Sydney\",\n    \"last_name\": \"Sweeney\",\n    \"company_id\": {{closed_company_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }
