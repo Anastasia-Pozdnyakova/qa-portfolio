@@ -1335,6 +1335,176 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "TC-21 Get user by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ответа ==========",
+                  "pm.test(\"Есть обязательные поля user_id, last_name\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"user_id\");",
+                  "    pm.expect(response).to.have.property(\"last_name\");",
+                  "    pm.expect(response.user_id).to.be.a(\"number\");",
+                  "    pm.expect(response.last_name).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "// ========== Проверка содержания ==========",
+                  "pm.test(\"Проверка содержания\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.user_id).to.be.greaterThan(0);",
+                  "    pm.expect(response.last_name.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка данных ==========",
+                  "pm.test(\"Проверка user_id\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.user_id).to.equal(parseInt(pm.variables.get(\"created_user_id\")));",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/{{created_user_id}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "{{created_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-22 Non-existent user id=9999 (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"detail — объект с полем reason\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.have.property(\"reason\");",
+                  "});",
+                  "",
+                  "pm.test(\"reason — строка, не пустая\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.detail.reason).to.be.a(\"string\");",
+                  "    pm.expect(response.detail.reason.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "pm.test(\"reason содержит ID несуществующего пользователя\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.detail.reason).to.include(\"9999\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/9999",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "9999"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-23 Invalid user id=abc (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"detail – массив, не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"array\");",
+                  "    pm.expect(response.detail.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "pm.test(\"detail содержит обязательные поля валидных типов\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const error = response.detail[0];",
+                  "    pm.expect(error).to.include.keys(\"type\",\"loc\", \"msg\");",
+                  "    pm.expect(error.type).to.be.a(\"string\");",
+                  "    pm.expect(error.loc).to.be.an(\"array\");",
+                  "    pm.expect(error.msg).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "pm.test(\"Текст ошибки содержит указание валидного типа\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const errorMsg = response.detail[0].msg;",
+                  "    pm.expect(errorMsg).to.include(\"integer\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/abc",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "abc"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }

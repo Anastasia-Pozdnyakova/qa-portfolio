@@ -144,6 +144,14 @@ BASE_URL = https://restapi.tech/api
 | TC-19 | На несуществующий `company_id` | 404 | ✅ готов |
 | TC-20 | На невалидный `company_id` | 400 | ✅ готов |
 
+### GET /api/users/{id}
+
+| TC | Проверка | Ожидаемый статус | Статус |
+|----|----------|------------------|--------|
+| TC-21 | GET-запрос на получение юзера по ID| 200 | ✅ готов |
+| TC-22 | На несуществующий `user_id=9999` | 404 | ✅ готов |
+| TC-23 | На невалидный `user_id=abc` | 422 | ✅ готов |
+
 ---
 
 ### 🔜 В планах
@@ -183,4 +191,4 @@ https://github.com/Anastasia-Pozdnyakova/qa-portfolio
 
 ---
 
-📫 **Контакты:** GitHub [Anastasia-Pozdnyakova](https://github.com/Anastasia-Pozdnyakova) · Telegram [@poznast](https://t.me/@poznast) · Email poznast59@ya.ru
+📫 **Контакты:** GitHub [Anastasia-Pozdnyakova](https://github.com/Anastasia-Pozdnyakova) · Telegram [@nastyapoze](https://t.me/@nastyapoze) · Email poznast59@ya.ru

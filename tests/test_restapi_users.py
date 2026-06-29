@@ -54,7 +54,7 @@ def create_user():
     assert response.status_code == 201, f"Ожидался 201, получен {response.status_code}"
     full_user = get_validated_json(response)
 
-    # Отдаём данные создания и результат
+    # Отдаём данные создания и результат (словарь)
     yield {"data": user_data, "response": full_user}
 
     # Очистка
@@ -245,7 +245,7 @@ def test_tc18_create_user_no_last_name():
     validate_content_type(response)
     data = get_validated_json(response)
 
-    # Проверка структуры
+    # Проверка структуры ошибки
     assert "detail" in data, "В ответе отсутствует поле detail"
     assert isinstance(data["detail"], list), "detail не массив"
     assert len(data["detail"]) > 0, "Массив detail пуст"
@@ -372,3 +372,117 @@ def test_tc20_create_user_inactive_company():
     assert (
         "active" in reason.lower()
     ), f"reason не содержит упоминание о валидном статусе ACTIVE"
+
+
+def test_tc21_get_user_by_id(create_user):
+    """TC-21: GET-запрос на получение юзера по ID"""
+
+    # Берём данные из фикстуры по созданию юзера
+    created_user_id = create_user["response"]["user_id"]
+    created_last_name = create_user["response"]["last_name"]
+
+    # Отправляем GET-запрос с ID из фикстуры
+    try:
+        response = requests.get(f"{USERS_ENDPOINT}/{created_user_id}", timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 200, (
+        f"Запрос к {USERS_ENDPOINT} вернул статус {response.status_code}. "
+        f"Ожидался 200"
+    )
+    validate_content_type(response)
+    fetched_user = get_validated_json(response)
+
+    # Проверка обязательных полей
+    validate_response_structure(fetched_user, constants.USER_REQUIRED_FIELDS)
+
+    fetched_user_id = fetched_user["user_id"]
+    fetched_last_name = fetched_user["last_name"]
+
+    assert isinstance(fetched_user_id, int), "ID должен быть числом"
+    assert isinstance(fetched_last_name, str), "last_name должен быть строкой"
+
+    # Сравниваем
+    assert (
+        created_user_id == fetched_user_id
+    ), f"user_id={created_user_id} из url не совпал с user_id={fetched_user_id} из ответа"
+    assert (
+        created_last_name == fetched_last_name
+    ), f"last_name={created_last_name} из фикстуры не совпал с last_name={fetched_last_name} из ответа"
+
+
+def test_tc22_invalid_id_returns_404():
+    """TC-22: Получение юзера по несуществующему ID возвращает статус 404"""
+
+    # Подготовка данных
+    user_id = 99999
+
+    # Отправка GET-запроса
+    try:
+        response = requests.get(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 404, (
+        f"Запрос к {USERS_ENDPOINT}/{user_id} (несуществуюший ID) вернул статус {response.status_code}. "
+        f"Ожидался 404"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры ошибки
+    assert "detail" in data, "В ответе отсутствует поле detail"
+    detail = data["detail"]
+    assert isinstance(detail, dict), "detail должен быть объектом (dict)"
+
+    assert "reason" in detail, "В detail отсутствует поле reason"
+    reason = detail["reason"]
+    assert isinstance(reason, str), "reason должен быть строкой"
+    assert len(reason) > 0, "reason не должна быть пустой"
+    assert str(user_id) in reason, f"reason не содержит упоминание об id={user_id}"
+
+
+def test_tc23_id_abc_returns_422():
+    """TC-23: Получение юзера на невалидный ID возвращает статус 422"""
+
+    # Подготовка данных
+    user_id = "abc"
+
+    # Отправка GET-запроса
+    try:
+        response = requests.get(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 422, (
+        f"Запрос к {USERS_ENDPOINT}/{user_id} (невалидный ID) вернул статус {response.status_code}. "
+        f"Ожидался 422"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры ошибки
+    assert "detail" in data, "В ответе отсутствует поле detail"
+    assert isinstance(data["detail"], list), "detail не массив"
+    assert len(data["detail"]) > 0, "Массив detail пуст"
+
+    # Берем первую ошибку
+    first_error = data["detail"][0]
+
+    # Проверка обязательных полей
+    for field in ["type", "loc", "msg"]:
+        assert field in first_error, f"Нет поля {field} в ответе"
+
+    assert isinstance(first_error["loc"], list), "loc не массив"
+    assert isinstance(first_error["msg"], str), "msg не строка"
+
+    assert (
+        "user_id" in first_error["loc"]
+    ), "loc не содержит упоминание о месте ошибки – поле user_id"
+    assert (
+        "integer" in first_error["msg"]
+    ), "msg не содержит упоминание о валидном типе – integer"
