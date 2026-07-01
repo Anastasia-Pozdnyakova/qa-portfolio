@@ -1065,13 +1065,9 @@
               "script": {
                 "exec": [
                   "// Генерируем уникальные данные",
-                  "const timestamp = Date.now();",
-                  "pm.variables.set(\"first_name\", \"User_\" + timestamp);",
-                  "pm.variables.set(\"last_name\", \"Test_\" + timestamp);",
-                  "pm.variables.set(\"company_id\", 3);",
-                  "",
-                  "console.log(\"Результат генерации нового first_name:\", pm.variables.get(\"first_name\"));",
-                  "console.log(\"Результат генерации нового last_name:\", pm.variables.get(\"last_name\"));"
+                  "pm.variables.set(\"first_name\", \"User_\" + Date.now());",
+                  "pm.variables.set(\"last_name\", \"Test_\" + Date.now());",
+                  "pm.variables.set(\"company_id\", 3);"
                 ],
                 "type": "text/javascript",
                 "packages": {},
@@ -1175,7 +1171,7 @@
           "response": []
         },
         {
-          "name": "TC-19 Сreate user invalid company (404)",
+          "name": "TC-19 Сreate user non-existent company (404)",
           "event": [
             {
               "listen": "test",
@@ -1236,7 +1232,7 @@
           "response": []
         },
         {
-          "name": "TC-20 Create user non-active company (400)",
+          "name": "TC-20 Create user inactive company (400)",
           "event": [
             {
               "listen": "prerequest",
@@ -1501,6 +1497,340 @@
               "path": [
                 "users",
                 "abc"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-24 Update existing user by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ответа ==========",
+                  "pm.test(\"Есть обязательные поля user_id, last_name\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"user_id\");",
+                  "    pm.expect(response).to.have.property(\"last_name\");",
+                  "    pm.expect(response.user_id).to.be.a(\"number\");",
+                  "    pm.expect(response.last_name).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "// ========== Проверка содержания ==========",
+                  "pm.test(\"Проверка содержания\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.user_id).to.be.greaterThan(0);",
+                  "    pm.expect(response.last_name.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка обновления ==========",
+                  "pm.test(\"`last_name` совпадает с отправленным\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.last_name).to.eql(pm.variables.get(\"updated_last_name\"));",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Генерируем уникальные данные",
+                  "pm.variables.set(\"updated_first_name\", \"Updated_\" + Date.now());",
+                  "pm.variables.set(\"updated_last_name\", \"User_\" + Date.now());",
+                  "",
+                  "console.log(\"Результат генерации нового updated_first_name:\", pm.variables.get(\"updated_first_name\"));",
+                  "console.log(\"Результат генерации нового updated_last_name:\", pm.variables.get(\"updated_last_name\"));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"{{updated_first_name}}\",\n    \"last_name\": \"{{updated_last_name}}\",\n    \"company_id\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/{{created_user_id}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "{{created_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-25 Update user no last_name (422)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"detail – массив, не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"array\");",
+                  "    pm.expect(response.detail.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка обязательных полей ==========",
+                  "pm.test(\"detail содержит обязательные поля валидных типов\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const error = response.detail[0];",
+                  "    pm.expect(error).to.include.keys(\"type\",\"loc\", \"msg\");",
+                  "    pm.expect(error.type).to.be.a(\"string\");",
+                  "    pm.expect(error.loc).to.be.an(\"array\");",
+                  "    pm.expect(error.msg).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ошибки ==========",
+                  "pm.test(\"Текст ошибки содержит подстроку обязательности поля\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const errorLoc = response.detail[0].loc;",
+                  "    const errorMsg = response.detail[0].msg;",
+                  "    pm.expect(errorLoc).to.include(\"last_name\"); // Проверка, что ошибка связана с полем last_name",
+                  "    pm.expect(errorMsg).to.include(\"required\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"Sydney\",\n    \"company_id\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/{{created_user_id}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "{{created_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-26 Update user non-existent company (404)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"Структура ответа\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"object\");",
+                  "    pm.expect(response.detail).to.have.property(\"reason\");",
+                  "    pm.expect(response.detail.reason).to.be.a(\"string\");",
+                  "    pm.expect(response.detail.reason.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ==========",
+                  "pm.test(\"reason содержит ID несуществующей компании\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const reason = response.detail.reason;",
+                  "    pm.expect(reason).to.include('9999');",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"Sydney\",\n    \"last_name\": \"Sweeney\",\n    \"company_id\": 9999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/{{created_user_id}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "{{created_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-27 Update user inactive company (400)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Получаем неактивную компанию",
+                  "const baseUrl = pm.environment.get(\"BASE_URL\");",
+                  "",
+                  "pm.sendRequest({",
+                  "    url: baseUrl + \"/companies?status=CLOSED\",",
+                  "    method: 'GET',",
+                  "    header: {",
+                  "        'Accept': 'application/json'",
+                  "    }",
+                  "}, function (err, res) {",
+                  "    if (err) {",
+                  "        console.error(err);",
+                  "        return;",
+                  "    }",
+                  "    const jsonData = res.json();",
+                  "    if (jsonData.data && jsonData.data.length > 0) {",
+                  "        const inactiveCompanyId = jsonData.data[0].company_id;",
+                  "        pm.variables.set(\"inactive_company_id\", inactiveCompanyId);",
+                  "        console.log(\"Неактивная компания ID:\", inactiveCompanyId);",
+                  "    } else {",
+                  "        pm.variables.set(\"inactive_company_id\", 9999);",
+                  "        console.warn(\"Нет CLOSED компаний, используется fallback ID 9999\");",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"Структура ответа\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"object\");",
+                  "    pm.expect(response.detail).to.have.property(\"reason\");",
+                  "    pm.expect(response.detail.reason).to.be.a(\"string\");",
+                  "    pm.expect(response.detail.reason.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ==========",
+                  "pm.test(\"reason упоминает ACTIVE\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const reason = response.detail.reason.toLowerCase();",
+                  "    pm.expect(reason).to.include('active');",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"Sydney\",\n    \"last_name\": \"Sweeney\",\n    \"company_id\": {{inactive_company_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/{{created_user_id}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "{{created_user_id}}"
               ]
             }
           },

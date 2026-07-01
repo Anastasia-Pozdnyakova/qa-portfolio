@@ -36,7 +36,7 @@ USER_OPTIONAL_FIELDS = [
 ]
 
 
-# Данные для POST /users
+# Данные для создания /users
 def create_unique_user():
     timestamp = int(time.time())
     return {

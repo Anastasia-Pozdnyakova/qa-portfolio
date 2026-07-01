@@ -486,3 +486,213 @@ def test_tc23_id_abc_returns_422():
     assert (
         "integer" in first_error["msg"]
     ), "msg не содержит упоминание о валидном типе – integer"
+
+
+def test_tc24_update_user_by_id(create_user):
+    """TC-24: PUT-запрос на изменение данных юзера по ID"""
+
+    # Берем данные из фикстуры
+    created_user_id = create_user["response"]["user_id"]
+    user_update_data = constants.create_unique_user()
+
+    # Отправка PUT-запроса
+    try:
+        response = requests.put(
+            f"{USERS_ENDPOINT}/{created_user_id}",
+            json=user_update_data,
+            timeout=TIMEOUT,
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 200, (
+        f"Запрос к {USERS_ENDPOINT}/{created_user_id} вернул статус {response.status_code}. "
+        f"Ожидался 200"
+    )
+    validate_content_type(response)
+    fresh_user_data = get_validated_json(response)
+
+    # Проверка структуры ответа
+    validate_response_structure(fresh_user_data, constants.USER_REQUIRED_FIELDS)
+    assert isinstance(fresh_user_data["user_id"], int), "Поле user_id не число"
+    assert isinstance(fresh_user_data["last_name"], str), "Поле last_name не строка"
+
+    assert fresh_user_data["last_name"] == user_update_data["last_name"], (
+        f"Ожидалось в поле 'last_name' {user_update_data['last_name']}, "
+        f"а получено {fresh_user_data['last_name']}"
+    )
+
+    assert fresh_user_data["first_name"] == user_update_data["first_name"], (
+        f"Ожидалось в поле 'first_name' {user_update_data['first_name']}, "
+        f"а получено {fresh_user_data['first_name']}"
+    )
+
+
+def test_tc25_update_user_no_last_name(create_user):
+    """TC-25: PUT без обязательного поля last_name возвращает 422"""
+
+    # Берем ID юзера из фикстуры
+    created_user_id = create_user["response"]["user_id"]
+
+    # Подготовка данных без обязательного поля
+    user_data = {"first_name": "Sydney", "company_id": 3}
+
+    # Отправка PUT-запроса
+    try:
+        response = requests.put(
+            f"{USERS_ENDPOINT}/{created_user_id}",
+            json=user_data,
+            timeout=TIMEOUT,
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 422, (
+        f"Запрос к {USERS_ENDPOINT}/{created_user_id} (невалидный ID) вернул статус {response.status_code}. "
+        f"Ожидался 422"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры ошибки
+    assert "detail" in data, "В ответе отсутствует поле detail"
+    assert isinstance(data["detail"], list), "detail не массив"
+    assert len(data["detail"]) > 0, "Массив detail пуст"
+
+    # Берем первую ошибку
+    first_error = data["detail"][0]
+
+    # Проверка обязательных полей
+    for field in ["type", "loc", "msg"]:
+        assert field in first_error, f"Нет поля {field} в ответе"
+
+    assert isinstance(first_error["loc"], list), "loc не массив"
+    assert isinstance(first_error["msg"], str), "msg не строка"
+
+    assert (
+        "last_name" in first_error["loc"]
+    ), "loc не содержит упоминание о месте ошибки – поле last_name"
+    assert (
+        "required" in first_error["msg"]
+    ), "msg не содержит упоминание об обязательности поля – required"
+
+
+def test_tc26_update_user_invalid_company(create_user):
+    """TC-26: Изменение юзера на несуществующую компанию возвращает статус 404"""
+
+    # Берем ID юзера из фикстуры
+    created_user_id = create_user["response"]["user_id"]
+
+    # Подготовка данных без обязательного поля
+    invalid_company_id = 9999
+    user_data = {
+        "first_name": "Sydney",
+        "last_name": "Sweeney",
+        "company_id": invalid_company_id,
+    }
+
+    # Отправка PUT-запроса
+    try:
+        response = requests.put(
+            f"{USERS_ENDPOINT}/{created_user_id}",
+            json=user_data,
+            timeout=TIMEOUT,
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 404, (
+        f"Запрос к {USERS_ENDPOINT}/{created_user_id} вернул статус {response.status_code}. "
+        f"Ожидался 404"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры ошибки
+    assert "detail" in data, "В ответе отсутствует поле detail"
+    detail = data["detail"]
+    assert isinstance(detail, dict), "detail должен быть объектом (dict)"
+
+    assert "reason" in detail, "В detail отсутствует поле reason"
+    reason = detail["reason"]
+    assert isinstance(reason, str), "reason должен быть строкой"
+    assert len(reason) > 0, "reason не должна быть пустой"
+    assert (
+        str(invalid_company_id) in reason
+    ), f"reason не содержит упоминание о несуществующем ID компании = {invalid_company_id}"
+
+
+def test_tc27_update_user_inactive_company(create_user):
+    """TC-27: Изменение юзера на неактивную компанию возвращает статус 400"""
+
+    # Подготовка данных
+    inactive_status = "CLOSED"
+
+    # Отправка GET-запроса со статусом
+    try:
+        response_companies = requests.get(
+            COMPANIES_ENDPOINT, params={"status": inactive_status}, timeout=TIMEOUT
+        )
+    except requests.exceptions.Timeout:
+        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response_companies.status_code == 200, (
+        f"Запрос к {COMPANIES_ENDPOINT} с параметром 'status'={inactive_status} "
+        f"вернул статус {response_companies.status_code}. Ожидался 200"
+    )
+    validate_content_type(response_companies)
+    data_companies = get_validated_json(response_companies)
+
+    companies = data_companies["data"]
+
+    if not companies:
+        pytest.skip("Нет компаний со статусом CLOSED")
+
+    inactive_company_id = companies[0]["company_id"]
+
+    # Берем ID юзера из фикстуры
+    created_user_id = create_user["response"]["user_id"]
+
+    # Подготовка данных с неактивной компанией
+    user_data = {
+        "first_name": "Sydney",
+        "last_name": "Sweeney",
+        "company_id": inactive_company_id,
+    }
+
+    # Отправка PUT-запроса
+    try:
+        response = requests.put(
+            f"{USERS_ENDPOINT}/{created_user_id}",
+            json=user_data,
+            timeout=TIMEOUT,
+        )
+    except requests.exceptions.Timeout:
+        assert (
+            False
+        ), f"Запрос к {USERS_ENDPOINT}/{created_user_id} превысил таймаут {TIMEOUT} сек."
+
+    # Проверка статуса, заголовка + парсинг JSON
+    assert response.status_code == 400, (
+        f"Запрос к {USERS_ENDPOINT}/{created_user_id} вернул статус {response.status_code}. "
+        f"Ожидался 400"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры ошибки
+    assert "detail" in data, "В ответе отсутствует поле detail"
+    detail = data["detail"]
+    assert isinstance(detail, dict), "detail должен быть объектом (dict)"
+
+    assert "reason" in detail, "В detail отсутствует поле reason"
+    reason = detail["reason"]
+    assert isinstance(reason, str), "reason должен быть строкой"
+    assert len(reason) > 0, "reason не должна быть пустой"
+    assert (
+        "active" in reason.lower()
+    ), f"reason не содержит упоминание о валидном статусе ACTIVE"
