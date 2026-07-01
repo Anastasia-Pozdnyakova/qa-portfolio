@@ -25,13 +25,11 @@
 | Путь | Описание |
 |------|----------|
 | `tests/test_restapi_companies.py` | pytest автотесты для `/companies` |
-| `tests/test_restapi_companies_by_id.py` | pytest автотесты для `/companies/{id}` |
-| `tests/test_api_sql.py` | тесты интеграции API + SQLite |
 | `tests/test_restapi_users.py` | pytest автотесты для `/users` |
+| `tests/test_api_sql.py` | тесты интеграции API + SQLite |
 | `postman/restapi-tech-collection.json` | Postman коллекция |
-| `test-cases/GET_companies.md` | Тест-кейсы для `/companies` |
-| `test-cases/GET_companies_by_id.md` | Тест-кейсы для `/companies/{id}` |
-| `test-cases/USERS.md` | Тест-кейсы для `/users` |
+| `test-cases/companies.md` | Тест-кейсы для `/companies` |
+| `test-cases/users.md` | Тест-кейсы для `/users` |
 | `assets/pytest_results.png` | Скриншот результатов |
 | `.gitignore` | Исключённые файлы |
 | `LICENSE` | Лицензия MIT |
@@ -161,13 +159,21 @@ BASE_URL = https://restapi.tech/api
 | TC-26 | Обновление с несуществующей компанией | 404 | ✅ готов |
 | TC-27 | Обновление с неактивной компанией | 400 | ✅ готов |
 
+### DELETE /api/users/{user_id}
+
+| TC | Проверка | Ожидаемый статус | Статус |
+|----|----------|------------------|--------|
+| TC-28 | Удаление существующего пользователя | 202 | ✅ готов |
+| TC-29 | Удаление несуществующего пользователя | 404 | ✅ готов |
+| TC-30 | Повторное удаление того же пользователя | 404 | ✅ готов |
+| TC-31 | Удаление с невалидным ID | 422 | ✅ готов |
+
 ---
 
 ### 🔜 В планах
 
 | Эндпоинт | Методы | Что планируется | Статус |
 |----------|--------|-----------------|--------|
-| `/users` | DELETE | CRUD-тесты | 📋 планируется |
 | `/auth` | POST, GET | Авторизация, получение токена | 📋 планируется |
 
 ---

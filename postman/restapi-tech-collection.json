@@ -1465,6 +1465,7 @@
                   "    pm.expect(response.detail.length).to.be.greaterThan(0);",
                   "});",
                   "",
+                  "// ========== Проверка обязательных полей ==========",
                   "pm.test(\"detail содержит обязательные поля валидных типов\", () => {",
                   "    const response = pm.response.json();",
                   "    const error = response.detail[0];",
@@ -1474,9 +1475,12 @@
                   "    pm.expect(error.msg).to.be.a(\"string\");",
                   "});",
                   "",
-                  "pm.test(\"Текст ошибки содержит указание валидного типа\", () => {",
+                  "// ========== Проверка подстроки ошибки ==========",
+                  "pm.test(\"Текст ошибки содержит подстроку типа поля\", () => {",
                   "    const response = pm.response.json();",
+                  "    const errorLoc = response.detail[0].loc;",
                   "    const errorMsg = response.detail[0].msg;",
+                  "    pm.expect(errorLoc).to.include(\"user_id\");",
                   "    pm.expect(errorMsg).to.include(\"integer\");",
                   "});"
                 ],
@@ -1549,6 +1553,7 @@
                   "// Генерируем уникальные данные",
                   "pm.variables.set(\"updated_first_name\", \"Updated_\" + Date.now());",
                   "pm.variables.set(\"updated_last_name\", \"User_\" + Date.now());",
+                  "pm.variables.set(\"updated_company_id\", (1, 2))",
                   "",
                   "console.log(\"Результат генерации нового updated_first_name:\", pm.variables.get(\"updated_first_name\"));",
                   "console.log(\"Результат генерации нового updated_last_name:\", pm.variables.get(\"updated_last_name\"));"
@@ -1632,7 +1637,7 @@
                   "    const response = pm.response.json();",
                   "    const errorLoc = response.detail[0].loc;",
                   "    const errorMsg = response.detail[0].msg;",
-                  "    pm.expect(errorLoc).to.include(\"last_name\"); // Проверка, что ошибка связана с полем last_name",
+                  "    pm.expect(errorLoc).to.include(\"last_name\"); ",
                   "    pm.expect(errorMsg).to.include(\"required\");",
                   "});"
                 ],
@@ -1831,6 +1836,311 @@
               "path": [
                 "users",
                 "{{created_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-28 Delete existing user (202)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Создаём нового пользователя",
+                  "const baseUrl = pm.environment.get(\"BASE_URL\");",
+                  "const timestamp = Date.now();",
+                  "const userData = {",
+                  "    \"first_name\": \"Delete_\" + timestamp,   ",
+                  "    \"last_name\": \"User_\" + timestamp,      ",
+                  "    \"company_id\": 3",
+                  "};",
+                  "",
+                  "console.log(\"📦 Данные для создания:\", userData);",
+                  "",
+                  "pm.sendRequest({",
+                  "    url: baseUrl + \"/users\",",
+                  "    method: 'POST',",
+                  "    header: {",
+                  "        'Content-Type': 'application/json'",
+                  "    },",
+                  "    body: {",
+                  "        mode: 'raw',",
+                  "        raw: JSON.stringify(userData)",
+                  "    }",
+                  "}, function (err, res) {",
+                  "    if (err) {",
+                  "        console.error(err);",
+                  "        return;",
+                  "    }",
+                  "    const response = res.json();",
+                  "    pm.variables.set(\"delete_user_id\", response.user_id);",
+                  "    console.log(\"Создан пользователь для удаления, ID:\", response.user_id);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка, что пользователь удален ==========",
+                  "pm.test(\"Пользователь удалён (GET → 404)\", () => {",
+                  "    const userId = pm.variables.get(\"delete_user_id\");",
+                  "    const baseUrl = pm.environment.get(\"BASE_URL\");",
+                  "    const url = baseUrl + \"/users/\" + userId;",
+                  "",
+                  "    console.log(\"🔍 Проверка URL:\", url);",
+                  "",
+                  "    pm.sendRequest({",
+                  "        url: url,",
+                  "        method: \"GET\"",
+                  "    }, function (err, res) {",
+                  "        console.log(\"📦 err:\", err);",
+                  "        console.log(\"📦 res:\", res);",
+                  "        pm.expect(res.code).to.equal(404);",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/{{delete_user_id}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "{{delete_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-29 Delete non-existent user (404)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"Структура ответа ошибки\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"object\");",
+                  "    pm.expect(response.detail).to.have.property(\"reason\");",
+                  "    pm.expect(response.detail.reason).to.be.a(\"string\");",
+                  "    pm.expect(response.detail.reason.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ==========",
+                  "pm.test(\"Поле reason содержит ID несуществующего юзера\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const reason = response.detail.reason;",
+                  "    pm.expect(reason).to.include('851987');",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/851987",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "851987"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-30 Delete user already deleted (404)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Создаём нового пользователя",
+                  "const baseUrl = pm.environment.get(\"BASE_URL\");",
+                  "const timestamp = Date.now();",
+                  "",
+                  "pm.sendRequest({",
+                  "    url: baseUrl + \"/users\",",
+                  "    method: 'POST',",
+                  "    header: {",
+                  "        'Content-Type': 'application/json'",
+                  "    },",
+                  "    body: {",
+                  "        mode: 'raw',",
+                  "        raw: JSON.stringify({",
+                  "            \"first_name\": \"DeleteTwice_\" + timestamp,",
+                  "            \"last_name\": \"UserTwice_\" + timestamp,",
+                  "            \"company_id\": 3",
+                  "        })",
+                  "    }",
+                  "}, function (err, res) {",
+                  "    if (err) {",
+                  "        console.error(err);",
+                  "        return;",
+                  "    }",
+                  "    const response = res.json();",
+                  "    pm.variables.set(\"delete_twice_user_id\", response.user_id);",
+                  "    console.log(\"Создан пользователь для повторного удаления, ID:\", response.user_id);",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Первое удаление ==========",
+                  "pm.test(\"Первое удаление → 202\", () => pm.response.to.have.status(202));",
+                  "",
+                  "// ========== Второе удаление ==========",
+                  "pm.test(\"Второе удаление → 404\", () => {",
+                  "    const userId = pm.variables.get(\"delete_twice_user_id\");",
+                  "    const baseUrl = pm.environment.get(\"BASE_URL\");",
+                  "",
+                  "    pm.sendRequest({",
+                  "        url: baseUrl + \"/users/\" + userId,",
+                  "        method: 'DELETE'",
+                  "    }, function (err, res) {",
+                  "        pm.expect(res.code).to.equal(404);",
+                  "        const response = res.json();",
+                  "        pm.expect(response.detail.reason).to.include(String(userId));",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/{{delete_twice_user_id}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "{{delete_twice_user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-31 Delete invalid user id (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"detail – массив, не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"array\");",
+                  "    pm.expect(response.detail.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка обязательных полей ==========",
+                  "pm.test(\"detail содержит обязательные поля валидных типов\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const error = response.detail[0];",
+                  "    pm.expect(error).to.include.keys(\"type\",\"loc\", \"msg\");",
+                  "    pm.expect(error.type).to.be.a(\"string\");",
+                  "    pm.expect(error.loc).to.be.an(\"array\");",
+                  "    pm.expect(error.msg).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ошибки ==========",
+                  "pm.test(\"Текст ошибки содержит подстроку типа поля\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const errorLoc = response.detail[0].loc;",
+                  "    const errorMsg = response.detail[0].msg;",
+                  "    pm.expect(errorLoc).to.include(\"user_id\");",
+                  "    pm.expect(errorMsg).to.include(\"integer\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/abc",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "abc"
               ]
             }
           },
