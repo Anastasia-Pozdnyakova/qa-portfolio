@@ -1286,7 +1286,7 @@
                   ");",
                   "",
                   "// ========== Проверка структуры ошибки ==========",
-                  "pm.test(\"Структура ответа\", () => {",
+                  "pm.test(\"Структура ответа содержит detail и reason\", () => {",
                   "    const response = pm.response.json();",
                   "    pm.expect(response).to.have.property(\"detail\");",
                   "    pm.expect(response.detail).to.be.an(\"object\");",
@@ -2141,6 +2141,493 @@
               "path": [
                 "users",
                 "abc"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "TC-32 Valid credentials (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ответа ==========",
+                  "pm.test(\"Есть поле login\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"token\");",
+                  "    pm.expect(response.token).to.be.a(\"string\");",
+                  "    pm.expect(response.token.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Сохранить токен ==========",
+                  "pm.test(\"Токен сохранен в переменную auth_token\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set(\"auth_token\", response.token);",
+                  "});",
+                  "",
+                  "console.log(\"🔑 auth_token:\", pm.environment.get(\"auth_token\"));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Генерируем уникальные данные",
+                  "const timestamp = Date.now();",
+                  "pm.variables.set(\"test_login\", \"user_\" + timestamp);",
+                  "pm.variables.set(\"test_password\", \"qwerty12345\");",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{test_login}}\",\n  \"password\": \"{{test_password}}\",\n  \"timeout\": 360\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/auth/authorize",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "authorize"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-33 Invalid password (403)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Генерируем уникальные данные",
+                  "const timestamp = Date.now();",
+                  "pm.variables.set(\"test_login\", \"user_\" + timestamp);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"Структура ответа содержит detail и reason\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"object\");",
+                  "    pm.expect(response.detail).to.have.property(\"reason\");",
+                  "    pm.expect(response.detail.reason).to.be.a(\"string\");",
+                  "    pm.expect(response.detail.reason.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ==========",
+                  "pm.test(\"reason упоминает login или password\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const reason = response.detail.reason.toLowerCase();",
+                  "    pm.expect(reason).to.satisfy(",
+                  "        msg => msg.includes(\"login\") || msg.includes(\"password\"),",
+                  "        \"Ошибка должна упоминать login или password\"",
+                  "    );",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{test_login}}\",\n  \"password\": \"qwerty\",\n  \"timeout\": 360\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/auth/authorize",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "authorize"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-34 Short login (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"detail – массив, не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"array\");",
+                  "    pm.expect(response.detail.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка обязательных полей ==========",
+                  "pm.test(\"detail содержит обязательные поля валидных типов\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const error = response.detail[0];",
+                  "    pm.expect(error).to.include.keys(\"type\",\"loc\", \"msg\");",
+                  "    pm.expect(error.type).to.be.a(\"string\");",
+                  "    pm.expect(error.loc).to.be.an(\"array\");",
+                  "    pm.expect(error.msg).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "// ========== Проверка подстрок ==========",
+                  "pm.test(\"loc содержит 'login'\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const errorLoc = response.detail[0].loc;",
+                  "    pm.expect(errorLoc).to.include(\"login\");",
+                  "});",
+                  "",
+                  "pm.test(\"msg содержит '3 characters'\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const errorMsg = response.detail[0].msg;",
+                  "    pm.expect(errorMsg).to.include(\"3 characters\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"Us\",\n  \"password\": \"qwerty12345\",\n  \"timeout\": 360\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/auth/authorize",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "authorize"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-35 Missing field (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => ",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"detail – массив, не пустой\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"array\");",
+                  "    pm.expect(response.detail.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка обязательных полей ==========",
+                  "pm.test(\"detail содержит обязательные поля валидных типов\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const error = response.detail[0];",
+                  "    pm.expect(error).to.include.keys(\"type\",\"loc\", \"msg\");",
+                  "    pm.expect(error.type).to.be.a(\"string\");",
+                  "    pm.expect(error.loc).to.be.an(\"array\");",
+                  "    pm.expect(error.msg).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "// ========== Проверка подстрок ==========",
+                  "pm.test(\"loc содержит 'password'\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const errorLoc = response.detail[0].loc;",
+                  "    pm.expect(errorLoc).to.include(\"password\");",
+                  "});",
+                  "",
+                  "pm.test(\"msg содержит 'required'\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const errorMsg = response.detail[0].msg;",
+                  "    pm.expect(errorMsg).to.include(\"required\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"love12345\",\n  \"timeout\": 360\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/auth/authorize",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "authorize"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-36 Get info valid token (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ответа ==========",
+                  "pm.test(\"Есть все обязательные поля в ответе\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"user_name\");",
+                  "    pm.expect(response).to.have.property(\"email_address\");",
+                  "    pm.expect(response).to.have.property(\"valid_till\");",
+                  "});",
+                  "",
+                  "pm.test(\"Поля валидных типов и не пустые\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.user_name).to.be.a(\"string\").and.to.not.be.empty;",
+                  "    pm.expect(response.email_address).to.be.a(\"string\").and.to.not.be.empty;",
+                  "    pm.expect(response.valid_till).to.be.a(\"string\").and.to.not.be.empty;",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-token",
+                "value": "{{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/me",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-37 Get info no token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"Структура ответа содержит detail и reason\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"object\");",
+                  "    pm.expect(response.detail).to.have.property(\"reason\");",
+                  "    pm.expect(response.detail.reason).to.be.a(\"string\");",
+                  "    pm.expect(response.detail.reason.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ==========",
+                  "pm.test(\"reason упоминает auth\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const reason = response.detail.reason.toLowerCase();",
+                  "    pm.expect(reason).to.include(\"auth\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/me",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-38 Get info invalid token (403)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Переменная с невалидным токеном",
+                  "pm.environment.set(\"invalid_token\", \"9Hk3MicX8zmm3gI3pEkoPNQdLrxS3wWT\");"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========== Базовые проверки ==========",
+                  "pm.test(\"Статус 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Время ответа < 500ms\", () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "pm.test(\"Content-Type содержит 'application/json'\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.match(/^application\\/json/)",
+                  ");",
+                  "",
+                  "// ========== Проверка структуры ошибки ==========",
+                  "pm.test(\"Структура ответа содержит detail и reason\", () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property(\"detail\");",
+                  "    pm.expect(response.detail).to.be.an(\"object\");",
+                  "    pm.expect(response.detail).to.have.property(\"reason\");",
+                  "    pm.expect(response.detail.reason).to.be.a(\"string\");",
+                  "    pm.expect(response.detail.reason.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// ========== Проверка подстроки ==========",
+                  "pm.test(\"reason упоминает token\", () => {",
+                  "    const response = pm.response.json();",
+                  "    const reason = response.detail.reason.toLowerCase();",
+                  "    pm.expect(reason).to.include(\"token\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-token",
+                "value": "{{invalid_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/me",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "me"
               ]
             }
           },
