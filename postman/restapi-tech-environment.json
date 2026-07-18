@@ -1,0 +1,34 @@
+{
+	"id": "700e3632-90a9-4a67-b168-8ad016eb56a6",
+	"name": "restapi.tech - local",
+	"values": [
+		{
+			"key": "BASE_URL",
+			"value": "https://restapi.tech/api",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "created_user_id",
+			"value": "",
+			"type": "any",
+			"enabled": true
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "any",
+			"enabled": true
+		},
+		{
+			"key": "invalid_token",
+			"value": "",
+			"type": "any",
+			"enabled": true
+		}
+	],
+	"color": 300,
+	"_postman_variable_scope": "environment",
+	"_postman_exported_at": "2026-07-18T10:39:02.096Z",
+	"_postman_exported_using": "Postman/12.19.5"
+}

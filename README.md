@@ -70,6 +70,27 @@ pytest tests/ -v -s
 pytest tests/ --html=report.html
 ```
 
+### 6. Запуск Postman коллекции через Newman
+
+```bash
+newman run postman/restapi-tech-collection.json --environment postman/restapi-tech-environment.json
+```
+---
+
+## 🚀 Запуск Postman коллекции через Newman
+
+### 1. Установка Newman:
+
+```bash
+npm install -g newman
+```
+
+### 2. Запуск коллекции через Newman:
+
+```bash
+newman run postman/restapi-tech-collection.json --environment postman/restapi-tech-environment.json
+```
+
 ---
 
 ## 📮 Postman коллекция
