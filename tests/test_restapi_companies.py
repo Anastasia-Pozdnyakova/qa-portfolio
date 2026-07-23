@@ -6,6 +6,7 @@
 import requests
 import json
 import constants
+import allure
 
 # ========== Настройки ==========
 BASE_URL = "https://restapi.tech/api"
@@ -38,6 +39,9 @@ def validate_response_structure(data, required_keys):
 
 
 # ========== Тесты ==========
+@allure.feature("Companies")
+@allure.story("GET /companies")
+@allure.severity(allure.severity_level.CRITICAL)
 def test_tc01_get_all_companies():
     """TC-01: Базовый GET-запрос на получение всех компаний"""
 
@@ -66,6 +70,9 @@ def test_tc01_get_all_companies():
         assert field in companies[0], f"В компании отсутствует поле '{field}'"
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies")
+@allure.severity(allure.severity_level.NORMAL)
 def test_tc02_get_companies_with_limit():
     """ТС-02: Параметр limit ограничивает количество компаний"""
 
@@ -97,6 +104,9 @@ def test_tc02_get_companies_with_limit():
     assert len(companies) <= limit_value
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies")
+@allure.severity(allure.severity_level.NORMAL)
 def test_tc03_get_companies_with_offset():
     """ТС-03: Параметр offset сдвигает количество компаний"""
 
@@ -165,6 +175,9 @@ def test_tc03_get_companies_with_offset():
     )
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies")
+@allure.severity(allure.severity_level.NORMAL)
 def test_tc04_get_companies_filter_by_active_status():
     """TC-04: Фильтрация компаний по статусу ACTIVE"""
 
@@ -200,6 +213,9 @@ def test_tc04_get_companies_filter_by_active_status():
         ), f"Ожидался статус {status_value}, получен {company['company_status']}"
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies")
+@allure.severity(allure.severity_level.MINOR)
 def test_tc05_invalid_status_returns_422():
     """TC-05: Проверка корректности ошибки при невалидном статусе"""
 
@@ -243,6 +259,9 @@ def test_tc05_invalid_status_returns_422():
     ), f"Сообщение об ошибке не содержит ни одного из допустимых статусов: {constants.VALID_STATUSES}"
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies")
+@allure.severity(allure.severity_level.MINOR)
 def test_tc06_limit_zero_returns_empty_data():
     """TC-06: limit=0 возвращает статус 200 и пустой массив data"""
 
@@ -278,6 +297,9 @@ def test_tc06_limit_zero_returns_empty_data():
     assert not companies, f"Массив 'data' не пустой"
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies")
+@allure.severity(allure.severity_level.MINOR)
 def test_tc07_limit_abc_returns_422():
     """TC-07: limit=abc возвращает статус 422 и detail об ошибке"""
 
@@ -320,6 +342,9 @@ def test_tc07_limit_abc_returns_422():
     assert "integer" in first_error["msg"], "Сообщение об ошибке не содержит 'integer'"
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies")
+@allure.severity(allure.severity_level.MINOR)
 def test_tc08_offset_negative_one_returns_no_shift():
     """TC-08: offset=-1 возвращает статус 200, компании без сдвига"""
 
@@ -372,6 +397,9 @@ def test_tc08_offset_negative_one_returns_no_shift():
     ), f"Ожидался ID=1, получен {companies[0]['company_id']}, при offset={offset_value} произошел сдвиг"
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies/{id}")
+@allure.severity(allure.severity_level.CRITICAL)
 def test_tc09_get_company_by_id_1():
     """TC-09: GET-запрос на получение компании по ID"""
 
@@ -416,6 +444,8 @@ def test_tc09_get_company_by_id_1():
         assert isinstance(item["translation"], str), f"translation должен быть строкой"
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies/{id}")
 def test_tc10_get_company_by_id_1_with_accept_language_ru():
     """TC-10: GET-запрос на получение компании по ID с заголовком определяющим язык"""
 
@@ -461,6 +491,8 @@ def test_tc10_get_company_by_id_1_with_accept_language_ru():
     ), "Массив description_lang должен отсутствовать"
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies/{id}")
 def test_tc11_get_company_by_id_9999_not_found():
     """TC-11: GET-запрос на получение компании по несуществующему ID"""
 
@@ -494,6 +526,8 @@ def test_tc11_get_company_by_id_9999_not_found():
     ), f"В тексте ошибки нет упоминания об id={company_id}"
 
 
+@allure.feature("Companies")
+@allure.story("GET /companies/{id}")
 def test_tc12_get_company_by_id_abc_invalid():
     """TC-12: GET-запрос на получение компании по невалидному ID"""
 

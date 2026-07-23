@@ -31,6 +31,7 @@
 | `postman/restapi-tech-collection.json` | Postman коллекция |
 | `test-cases/companies.md` | Тест-кейсы для `/companies` |
 | `test-cases/users.md` | Тест-кейсы для `/users` |
+| `test-cases/auth.md` | Тест-кейсы для `/auth` |
 | `assets/pytest_results.png` | Скриншот результатов |
 | `.gitignore` | Исключённые файлы |
 | `LICENSE` | Лицензия MIT |
@@ -89,6 +90,34 @@ npm install -g newman
 
 ```bash
 newman run postman/restapi-tech-collection.json --environment postman/restapi-tech-environment.json
+```
+
+---
+
+## 🚀 Генерация отчёта Allure
+
+### 1. Установка Allure:
+
+```bash
+brew install allure
+```
+
+### 2. Запуск тестов с Allure:
+
+```bash
+pytest tests/ --alluredir=allure-results
+```
+
+### 3. Сгенерировать отчёт:
+
+```bash
+allure generate allure-results -o allure-report --clean
+```
+
+### 4. Открыть отчёт:
+
+```bash
+allure open allure-report
 ```
 
 ---

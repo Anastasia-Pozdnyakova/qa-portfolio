@@ -7,7 +7,7 @@ import requests
 import json
 import time
 import pytest
-import constants
+import allure
 
 # ========== Настройки ==========
 BASE_URL = "https://restapi.tech/api"
@@ -72,6 +72,9 @@ def auth_token():
 
 
 # ========== Тесты ==========
+@allure.feature("Auth")
+@allure.story("POST /auth/authorize")
+@allure.severity(allure.severity_level.BLOCKER)
 def test_tc32_auth_success(auth_token):
     """TC-32: Успешная регистрация пользователя"""
 
@@ -81,6 +84,9 @@ def test_tc32_auth_success(auth_token):
     assert len(auth_token) > 0, "token не должен быть пустым"
 
 
+@allure.feature("Auth")
+@allure.story("POST /auth/authorize")
+@allure.severity(allure.severity_level.MINOR)
 def test_tc33_auth_invalid_password():
     """TC-33: Регистрация с невалидным паролем"""
 
@@ -116,6 +122,9 @@ def test_tc33_auth_invalid_password():
     ), f"reason не содержит ни 'login', ни 'password'. reason {reason}"
 
 
+@allure.feature("Auth")
+@allure.story("POST /auth/authorize")
+@allure.severity(allure.severity_level.MINOR)
 def test_tc34_auth_short_login():
     """TC-34: Регистрация с логином < 3 символов"""
 
@@ -162,6 +171,9 @@ def test_tc34_auth_short_login():
     assert "3 characters" in msg, "msg не содержит упоминание о '3 characters'"
 
 
+@allure.feature("Auth")
+@allure.story("POST /auth/authorize")
+@allure.severity(allure.severity_level.MINOR)
 def test_tc35_auth_no_password():
     """TC-35: Регистрация без поля password"""
 
@@ -207,6 +219,9 @@ def test_tc35_auth_no_password():
     assert "required" in msg, "msg не содержит упоминание о 'required'"
 
 
+@allure.feature("Auth")
+@allure.story("GET /auth/me")
+@allure.severity(allure.severity_level.BLOCKER)
 def test_tc36_me_success(auth_token):
     """TC-36: /me с валидным токеном"""
 
@@ -237,6 +252,8 @@ def test_tc36_me_success(auth_token):
     assert len(data["valid_till"]) > 0, "valid_till пустой"
 
 
+@allure.feature("Auth")
+@allure.story("GET /auth/me")
 def test_tc37_me_no_token():
     """TC-37: /me без заголовка x-token"""
 
@@ -263,6 +280,8 @@ def test_tc37_me_no_token():
     assert "auth" in reason, f"reason не содержит 'auth'. reason {reason}"
 
 
+@allure.feature("Auth")
+@allure.story("GET /auth/me")
 def test_tc38_me_invalid_token():
     """TC-38: /me с невалидным токеном"""
 
@@ -292,6 +311,8 @@ def test_tc38_me_invalid_token():
     assert "token" in reason, f"reason не содержит 'token'. reason {reason}"
 
 
+@allure.feature("Auth")
+@allure.story("GET /auth/me")
 def test_tc39_token_expires():
     """TC-39: Проверка истечения токена"""
 

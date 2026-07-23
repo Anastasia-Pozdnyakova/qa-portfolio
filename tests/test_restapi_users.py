@@ -7,6 +7,7 @@ import requests
 import json
 import constants
 import pytest
+import allure
 
 # ========== Настройки ==========
 BASE_URL = "https://restapi.tech/api"
@@ -66,6 +67,9 @@ def create_user():
 
 
 # ========== Тесты ==========
+@allure.feature("Users")
+@allure.story("GET /users")
+@allure.severity(allure.severity_level.CRITICAL)
 def test_tc13_get_all_users():
     """TC-13: Базовый GET-запрос на получение всех пользователей"""
 
@@ -101,6 +105,9 @@ def test_tc13_get_all_users():
     assert isinstance(first_user["user_id"], int), "user_id должен быть числом"
 
 
+@allure.feature("Users")
+@allure.story("GET /users")
+@allure.severity(allure.severity_level.NORMAL)
 def test_tc14_get_users_with_limit():
     """ТС-14: Параметр limit ограничивает количество пользователей"""
 
@@ -133,6 +140,9 @@ def test_tc14_get_users_with_limit():
     assert len(data["data"]) <= data["meta"]["limit"]
 
 
+@allure.feature("Users")
+@allure.story("GET /users")
+@allure.severity(allure.severity_level.NORMAL)
 def test_tc15_get_users_with_offset():
     """TC-15: Параметр offset сдвигает список пользователей"""
 
@@ -167,6 +177,8 @@ def test_tc15_get_users_with_offset():
     assert len(users) > 0, "Массив data пустой"
 
 
+@allure.feature("Users")
+@allure.story("GET /users")
 def test_tc16_limit_abc_returns_422():
     """TC-16: limit=abc возвращает статус 422 и detail об ошибке"""
 
@@ -208,6 +220,9 @@ def test_tc16_limit_abc_returns_422():
     assert "integer" in error_msg, "Сообщение об ошибке не содержит 'integer'"
 
 
+@allure.feature("Users")
+@allure.story("POST /users")
+@allure.severity(allure.severity_level.BLOCKER)
 def test_tc17_create_user_valid(create_user):
     """TC-17: Создание юзера с валидаными данными"""
 
@@ -225,6 +240,9 @@ def test_tc17_create_user_valid(create_user):
     )
 
 
+@allure.feature("Users")
+@allure.story("POST /users")
+@allure.severity(allure.severity_level.TRIVIAL)
 def test_tc18_create_user_no_last_name():
     """TC-18: Создание юзера без обязательного поля last_name возвращает статус 422"""
 
@@ -269,6 +287,9 @@ def test_tc18_create_user_no_last_name():
     ), "msg не содержит упоминание об обязательности поля – required"
 
 
+@allure.feature("Users")
+@allure.story("POST /users")
+@allure.severity(allure.severity_level.TRIVIAL)
 def test_tc19_create_user_invalid_company():
     """TC-19: Создание юзера на несуществующую компанию возвращает статус 404"""
 
@@ -308,6 +329,8 @@ def test_tc19_create_user_invalid_company():
     ), f"reason не содержит упоминание о невалидном ID {invalid_company_id}"
 
 
+@allure.feature("Users")
+@allure.story("POST /users")
 def test_tc20_create_user_inactive_company():
     """TC-20: Создание юзера на неактивную компанию возвращает статус 400"""
 
@@ -374,6 +397,9 @@ def test_tc20_create_user_inactive_company():
     ), f"reason не содержит упоминание о валидном статусе ACTIVE"
 
 
+@allure.feature("Users")
+@allure.story("GET /users/{id}")
+@allure.severity(allure.severity_level.CRITICAL)
 def test_tc21_get_user_by_id(create_user):
     """TC-21: GET-запрос на получение юзера по ID"""
 
@@ -413,6 +439,9 @@ def test_tc21_get_user_by_id(create_user):
     ), f"last_name={created_last_name} из фикстуры не совпал с last_name={fetched_last_name} из ответа"
 
 
+@allure.feature("Users")
+@allure.story("GET /users/{id}")
+@allure.severity(allure.severity_level.TRIVIAL)
 def test_tc22_invalid_id_returns_404():
     """TC-22: Получение юзера по несуществующему ID возвращает статус 404"""
 
@@ -445,6 +474,8 @@ def test_tc22_invalid_id_returns_404():
     assert str(user_id) in reason, f"reason не содержит упоминание об id={user_id}"
 
 
+@allure.feature("Users")
+@allure.story("GET /users/{id}")
 def test_tc23_id_abc_returns_422():
     """TC-23: Получение юзера на невалидный ID возвращает статус 422"""
 
@@ -488,6 +519,9 @@ def test_tc23_id_abc_returns_422():
     ), "msg не содержит упоминание о валидном типе – integer"
 
 
+@allure.feature("Users")
+@allure.story("PUT /users/{id}")
+@allure.severity(allure.severity_level.CRITICAL)
 def test_tc24_update_user_by_id(create_user):
     """TC-24: PUT-запрос на изменение данных юзера по ID"""
 
@@ -529,6 +563,9 @@ def test_tc24_update_user_by_id(create_user):
     )
 
 
+@allure.feature("Users")
+@allure.story("PUT /users/{id}")
+@allure.severity(allure.severity_level.TRIVIAL)
 def test_tc25_update_user_no_last_name(create_user):
     """TC-25: PUT без обязательного поля last_name возвращает 422"""
 
@@ -579,6 +616,8 @@ def test_tc25_update_user_no_last_name(create_user):
     ), "msg не содержит упоминание об обязательности поля – required"
 
 
+@allure.feature("Users")
+@allure.story("PUT /users/{id}")
 def test_tc26_update_user_invalid_company(create_user):
     """TC-26: Изменение юзера на несуществующую компанию возвращает статус 404"""
 
@@ -625,6 +664,8 @@ def test_tc26_update_user_invalid_company(create_user):
     ), f"reason не содержит упоминание о несуществующем ID компании = {invalid_company_id}"
 
 
+@allure.feature("Users")
+@allure.story("PUT /users/{id}")
 def test_tc27_update_user_inactive_company(create_user):
     """TC-27: Изменение юзера на неактивную компанию возвращает статус 400"""
 
@@ -696,3 +737,133 @@ def test_tc27_update_user_inactive_company(create_user):
     assert (
         "active" in reason.lower()
     ), f"reason не содержит упоминание о валидном статусе ACTIVE"
+
+
+@allure.feature("Users")
+@allure.story("DELETE /users/{id}")
+@allure.severity(allure.severity_level.BLOCKER)
+def test_tc28_delete_user_by_id(create_user):
+    """TC-28: DELETE-запрос на удаление юзера по ID"""
+
+    user_id = create_user["response"]["user_id"]
+
+    try:
+        response = requests.delete(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert (
+            False
+        ), f"Запрос к {USERS_ENDPOINT}/{user_id} превысил таймаут {TIMEOUT} сек."
+
+    assert response.status_code == 202, (
+        f"Запрос к {USERS_ENDPOINT}/{user_id} вернул статус {response.status_code}. "
+        f"Ожидался 202"
+    )
+    validate_content_type(response)
+
+    # Проверка, что пользователь удалён
+    try:
+        response_get = requests.get(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert (
+            False
+        ), f"Запрос к {USERS_ENDPOINT}/{user_id} превысил таймаут {TIMEOUT} сек."
+
+    assert (
+        response_get.status_code == 404
+    ), f"Пользователь {user_id} всё ещё существует. Статус {response_get.status_code}"
+
+
+@allure.feature("Users")
+@allure.story("DELETE /users/{id}")
+def test_tc29_delete_user_not_found():
+    """TC-29: DELETE-запрос на удаление несуществующего юзера"""
+
+    user_id = 851987
+
+    try:
+        response = requests.delete(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert (
+            False
+        ), f"Запрос к {USERS_ENDPOINT}/{user_id} превысил таймаут {TIMEOUT} сек."
+
+    assert response.status_code == 404, (
+        f"Запрос к {USERS_ENDPOINT}/{user_id} вернул статус {response.status_code}. "
+        f"Ожидался 404"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    assert "detail" in data, "В ответе отсутствует поле detail"
+    detail = data["detail"]
+    assert isinstance(detail, dict), "detail должен быть объектом (dict)"
+    assert "reason" in detail, "В detail отсутствует поле reason"
+
+    reason = detail["reason"]
+    assert isinstance(reason, str), "reason должен быть строкой"
+    assert len(reason) > 0, "reason не должна быть пустой"
+    assert str(user_id) in reason, f"reason не содержит упоминание об id={user_id}"
+
+
+@allure.feature("Users")
+@allure.story("DELETE /users/{id}")
+def test_tc30_delete_user_twice(create_user):
+    """TC-30: Повторное удаление одного и того же юзера"""
+
+    user_id = create_user["response"]["user_id"]
+
+    # Первое удаление → 202
+    try:
+        response1 = requests.delete(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert (
+            False
+        ), f"Запрос к {USERS_ENDPOINT}/{user_id} превысил таймаут {TIMEOUT} сек."
+
+    assert response1.status_code == 202
+
+    # Второе удаление → 404
+    try:
+        response2 = requests.delete(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert (
+            False
+        ), f"Запрос к {USERS_ENDPOINT}/{user_id} превысил таймаут {TIMEOUT} сек."
+
+    assert response2.status_code == 404
+
+
+@allure.feature("Users")
+@allure.story("DELETE /users/{id}")
+def test_tc31_delete_user_invalid_id():
+    """TC-31: DELETE-запрос на удаление юзера по невалидному ID"""
+
+    user_id = "abc"
+
+    try:
+        response = requests.delete(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        assert (
+            False
+        ), f"Запрос к {USERS_ENDPOINT}/{user_id} превысил таймаут {TIMEOUT} сек."
+
+    assert response.status_code == 422, (
+        f"Запрос к {USERS_ENDPOINT}/{user_id} вернул статус {response.status_code}. "
+        f"Ожидался 422"
+    )
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    assert "detail" in data, "В ответе отсутствует поле detail"
+    detail = data["detail"]
+    assert isinstance(detail, list), "detail должен быть массивом"
+    assert len(detail) > 0, "detail пуст"
+
+    first_error = detail[0]
+    for field in ["type", "loc", "msg"]:
+        assert field in first_error, f"В ошибке отсутствует поле '{field}'"
+
+    assert "user_id" in str(first_error["loc"]), "loc не содержит упоминание о user_id"
+    assert (
+        "integer" in first_error["msg"].lower()
+    ), "msg не содержит упоминание об integer"

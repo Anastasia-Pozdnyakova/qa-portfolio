@@ -5,6 +5,7 @@ import requests
 import sqlite3
 import logging
 import os
+import allure
 
 # ========== Настройки ==========
 BASE_URL = "https://restapi.tech/api"
@@ -72,6 +73,9 @@ def db_connection():
 
 
 # ========== Тесты ==========
+@allure.feature("SQL + API")
+@allure.story("Сохранение компаний в БД")
+@allure.severity(allure.severity_level.NORMAL)
 @pytest.mark.parametrize("company_id", get_company_ids())
 def test_sql_with_api_companies(db_connection, company_id):
     """Проверяет, что данные компании из API корректно сохраняются в SQLite"""
@@ -127,6 +131,9 @@ def test_sql_with_api_companies(db_connection, company_id):
     logger.info(f"Тест для компании {company_id} пройден")
 
 
+@allure.feature("SQL + API")
+@allure.story("Фильтрация данных в БД")
+@allure.severity(allure.severity_level.NORMAL)
 def test_sql_save_all_companies(db_connection):
     """Сохраняем все компании из API в SQLite и проверяем количество"""
 
@@ -183,6 +190,9 @@ def test_sql_save_all_companies(db_connection):
     ), f"В БД {count_in_db} записей, в API {total_companies_from_api}"
 
 
+@allure.feature("SQL + API")
+@allure.story("Сохранение одной компании")
+@allure.severity(allure.severity_level.MINOR)
 def test_sql_filter_active_companies(db_connection):
     """Проверяем SQL-запрос с фильтрацией по статусу"""
 
