@@ -4,10 +4,14 @@
 """
 
 import requests
-import json
 import constants
 import pytest
 import allure
+from utils.helpers import (
+    validate_content_type,
+    get_validated_json,
+    validate_response_structure,
+)
 
 # ========== Настройки ==========
 BASE_URL = "https://restapi.tech/api"
@@ -16,57 +20,8 @@ USERS_ENDPOINT = f"{BASE_URL}/users"
 COMPANIES_ENDPOINT = f"{BASE_URL}/companies"
 
 
-# ========== Вспомогательные функции ==========
-def validate_content_type(response, expected_type="application/json"):
-    """Проверяет заголовок Content-Type"""
-    content_type = response.headers.get("Content-Type", "")
-    assert content_type.startswith(
-        expected_type
-    ), f"Content-Type некорректен: '{content_type}'. Ожидался '{expected_type}'"
-
-
-def get_validated_json(response):
-    """Проверяет, что ответ — валидный JSON, и возвращает распарсенные данные"""
-    try:
-        data = response.json()
-        return data
-    except json.JSONDecodeError:
-        assert False, f"Ответ не является валидным JSON. Тело {response.text[:200]}"
-
-
-def validate_response_structure(data, required_keys):
-    """Проверяет наличие обязательных полей в ответе"""
-    for key in required_keys:
-        assert key in data, f"Отсутствует поле '{key}'"
-
-
-# ========== Фикстуры ==========
-@pytest.fixture
-def create_user():
-    """Фикстура для создания нового юзера + получения данных + очистка БД после теста"""
-
-    user_data = constants.create_unique_user()
-
-    try:
-        response = requests.post(USERS_ENDPOINT, json=user_data, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        pytest.fail(f"Запрос к {USERS_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
-
-    assert response.status_code == 201, f"Ожидался 201, получен {response.status_code}"
-    full_user = get_validated_json(response)
-
-    # Отдаём данные создания и результат (словарь)
-    yield {"data": user_data, "response": full_user}
-
-    # Очистка
-    user_id = full_user["user_id"]
-    # Чекаем, существует ли ещё пользователь и удаляем
-    check = requests.get(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
-    if check.status_code == 200:
-        requests.delete(f"{USERS_ENDPOINT}/{user_id}", timeout=TIMEOUT)
-
-
 # ========== Тесты ==========
+@pytest.mark.smoke
 @allure.feature("Users")
 @allure.story("GET /users")
 @allure.severity(allure.severity_level.CRITICAL)
@@ -220,6 +175,7 @@ def test_tc16_limit_abc_returns_422():
     assert "integer" in error_msg, "Сообщение об ошибке не содержит 'integer'"
 
 
+@pytest.mark.smoke
 @allure.feature("Users")
 @allure.story("POST /users")
 @allure.severity(allure.severity_level.BLOCKER)
@@ -397,6 +353,7 @@ def test_tc20_create_user_inactive_company():
     ), f"reason не содержит упоминание о валидном статусе ACTIVE"
 
 
+@pytest.mark.smoke
 @allure.feature("Users")
 @allure.story("GET /users/{id}")
 @allure.severity(allure.severity_level.CRITICAL)
@@ -519,6 +476,7 @@ def test_tc23_id_abc_returns_422():
     ), "msg не содержит упоминание о валидном типе – integer"
 
 
+@pytest.mark.smoke
 @allure.feature("Users")
 @allure.story("PUT /users/{id}")
 @allure.severity(allure.severity_level.CRITICAL)
@@ -739,6 +697,7 @@ def test_tc27_update_user_inactive_company(create_user):
     ), f"reason не содержит упоминание о валидном статусе ACTIVE"
 
 
+@pytest.mark.smoke
 @allure.feature("Users")
 @allure.story("DELETE /users/{id}")
 @allure.severity(allure.severity_level.BLOCKER)

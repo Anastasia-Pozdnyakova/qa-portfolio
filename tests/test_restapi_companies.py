@@ -4,9 +4,14 @@
 """
 
 import requests
-import json
 import constants
+import pytest
 import allure
+from utils.helpers import (
+    validate_content_type,
+    get_validated_json,
+    validate_response_structure,
+)
 
 # ========== Настройки ==========
 BASE_URL = "https://restapi.tech/api"
@@ -14,31 +19,8 @@ TIMEOUT = 5
 COMPANIES_ENDPOINT = f"{BASE_URL}/companies"
 
 
-# ========== Вспомогательные функции ==========
-def validate_content_type(response, expected_type="application/json"):
-    """Проверяет заголовок Content-Type"""
-    content_type = response.headers.get("Content-Type", "")
-    assert content_type.startswith(
-        expected_type
-    ), f"Content-Type некорректен: '{content_type}'. Ожидался '{expected_type}'"
-
-
-def get_validated_json(response):
-    """Проверяет, что ответ — валидный JSON, и возвращает распарсенные данные"""
-    try:
-        data = response.json()
-        return data
-    except json.JSONDecodeError:
-        assert False, f"Ответ не является валидным JSON. Тело {response.text[:200]}"
-
-
-def validate_response_structure(data, required_keys):
-    """Проверяет наличие обязательных полей в ответе"""
-    for key in required_keys:
-        assert key in data, f"Отсутствует поле '{key}'"
-
-
 # ========== Тесты ==========
+@pytest.mark.smoke
 @allure.feature("Companies")
 @allure.story("GET /companies")
 @allure.severity(allure.severity_level.CRITICAL)
@@ -397,6 +379,7 @@ def test_tc08_offset_negative_one_returns_no_shift():
     ), f"Ожидался ID=1, получен {companies[0]['company_id']}, при offset={offset_value} произошел сдвиг"
 
 
+@pytest.mark.smoke
 @allure.feature("Companies")
 @allure.story("GET /companies/{id}")
 @allure.severity(allure.severity_level.CRITICAL)

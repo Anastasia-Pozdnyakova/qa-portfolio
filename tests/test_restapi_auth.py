@@ -4,10 +4,14 @@
 """
 
 import requests
-import json
 import time
 import pytest
 import allure
+from utils.helpers import (
+    validate_content_type,
+    get_validated_json,
+    validate_response_structure,
+)
 
 # ========== Настройки ==========
 BASE_URL = "https://restapi.tech/api"
@@ -17,61 +21,8 @@ ME_ENDPOINT = f"{BASE_URL}/auth/me"
 VALID_PASSWORD = "qwerty12345"
 
 
-# ========== Вспомогательные функции ==========
-def validate_content_type(response, expected_type="application/json"):
-    """Проверяет заголовок Content-Type"""
-    content_type = response.headers.get("Content-Type", "")
-    assert content_type.startswith(
-        expected_type
-    ), f"Content-Type некорректен: '{content_type}'. Ожидался '{expected_type}'"
-
-
-def get_validated_json(response):
-    """Проверяет, что ответ — валидный JSON, и возвращает распарсенные данные"""
-    try:
-        data = response.json()
-        return data
-    except json.JSONDecodeError:
-        assert False, f"Ответ не является валидным JSON. Тело {response.text[:200]}"
-
-
-def validate_response_structure(data, required_keys):
-    """Проверяет наличие обязательных полей в ответе"""
-    for key in required_keys:
-        assert key in data, f"Отсутствует поле '{key}'"
-
-
-# ========== Фикстуры ==========
-@pytest.fixture(scope="session")
-def auth_token():
-    """Фикстура для получения токена"""
-
-    user_data = {
-        "login": "user_" + str(int(time.time())),
-        "password": VALID_PASSWORD,
-        "timeout": 360,
-    }
-
-    try:
-        auth_response = requests.post(AUTH_ENDPOINT, json=user_data, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        pytest.fail(f"Запрос к {AUTH_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
-
-    assert (
-        auth_response.status_code == 200
-    ), f"Ожидался 200, получен {auth_response.status_code}"
-    validate_content_type(auth_response)
-    data = get_validated_json(auth_response)
-
-    assert "token" in data, "В ответе отсутствует поле token"
-    token = data["token"]
-    assert isinstance(token, str), "token должен быть строкой"
-    assert len(token) > 0, "token не должен быть пустым"
-
-    return token
-
-
 # ========== Тесты ==========
+@pytest.mark.smoke
 @allure.feature("Auth")
 @allure.story("POST /auth/authorize")
 @allure.severity(allure.severity_level.BLOCKER)
