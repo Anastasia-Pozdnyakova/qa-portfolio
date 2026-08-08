@@ -28,7 +28,12 @@ jobs:
       - name: Install Allure
         run: |
           sudo apt-get update
-          sudo apt-get install -y allure
+          sudo apt-get install -y wget unzip
+          wget https://github.com/allure-framework/allure2/releases/download/2.32.0/allure-2.32.0.zip
+          unzip allure-2.32.0.zip
+          sudo mv allure-2.32.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/local/bin/allure
+          allure --version
 
       - name: Generate Allure report
         run: allure generate allure-results -o allure-report --clean
