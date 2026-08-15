@@ -240,6 +240,12 @@ BASE_URL = https://restapi.tech/api
 
 ---
 
+## 📊 Allure-отчёт
+
+![Allure-отчёт](assets/allure-report.png)
+
+---
+
 ## 📋 Примечания
 
 1. Перед запуском тестов убедитесь, что API доступно по указанному BASE_URL.
