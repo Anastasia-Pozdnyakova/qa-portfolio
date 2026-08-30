@@ -1,318 +1,226 @@
 """Автотесты для API restapi.tech
 Эндпоинты: /auth/authorize, /auth/me
 Документация: https://restapi.tech
+Тесты: TC-32 – TC-139
 """
 
 import requests
 import time
 import pytest
 import allure
+from api.auth_api import AuthAPI
+from data.expected_status import EXPECTED_STATUS
+from data.auth_data import (
+    INVALID_PASSWORD,
+    SHORT_LOGIN,
+    AUTH_ME_REQUIRED_FIELDS,
+    INVALID_TOKEN,
+)
+
 from utils.helpers import (
     validate_content_type,
     get_validated_json,
     validate_response_structure,
+    validate_fields_presence_and_type,
+    validate_403_error,
+    validate_422_error,
+    validate_401_error,
 )
 
-# ========== Настройки ==========
-BASE_URL = "https://restapi.tech/api"
-TIMEOUT = 5
-AUTH_ENDPOINT = f"{BASE_URL}/auth/authorize"
-ME_ENDPOINT = f"{BASE_URL}/auth/me"
-VALID_PASSWORD = "qwerty12345"
+api = AuthAPI()
 
 
-# ========== Тесты ==========
+# ========== ТЕСТЫ ==========
 @pytest.mark.smoke
 @allure.feature("Auth")
 @allure.story("POST /auth/authorize")
-@allure.severity(allure.severity_level.BLOCKER)
-def test_tc32_auth_success(auth_token):
-    """TC-32: Успешная регистрация пользователя"""
+@allure.severity(allure.severity_level.CRITICAL)
+def test_auth_success():
+    """TC-32: Успешная авторизация"""
 
-    print("🔑 Токен:", auth_token)
-    assert auth_token is not None, f"Вместо токена – {auth_token}"
-    assert isinstance(auth_token, str), "token должен быть строкой"
-    assert len(auth_token) > 0, "token не должен быть пустым"
+    response = api.authorize()
 
-
-@allure.feature("Auth")
-@allure.story("POST /auth/authorize")
-@allure.severity(allure.severity_level.MINOR)
-def test_tc33_auth_invalid_password():
-    """TC-33: Регистрация с невалидным паролем"""
-
-    # Подготовка данных
-    user_data = {
-        "login": "user_" + str(int(time.time())),
-        "password": "qwerty1",
-        "timeout": 360,
-    }
-
-    # Отправка POST-запроса
-    try:
-        response = requests.post(AUTH_ENDPOINT, json=user_data, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        pytest.fail(f"Запрос к {AUTH_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
-
-    assert response.status_code == 403, f"Ожидался 403, получен {response.status_code}"
-    validate_content_type(response)
-    data = get_validated_json(response)
-
-    # Проверка структуры ошибки
-    assert "detail" in data, "В ответе отсутствует поле detail"
-
-    detail = data["detail"]
-    assert isinstance(detail, dict), "detail должен быть объектом (dict)"
-    assert "reason" in detail, "В detail отсутствует поле reason"
-
-    reason = detail["reason"].lower()
-    assert isinstance(reason, str), "reason должен быть строкой"
-    assert len(reason) > 0, "reason не должна быть пустой"
+    # Проверка статуса
     assert (
-        "login" in reason or "password" in reason
-    ), f"reason не содержит ни 'login', ни 'password'. reason {reason}"
+        response.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
+
+    # Проверка  заголовка + парсинг JSON
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # token — обязательное поле, строка, не пустая
+    validate_fields_presence_and_type(data, ("token", str))
+
+
+@allure.feature("Auth")
+@allure.story("POST /auth/authorize")
+@allure.severity(allure.severity_level.NORMAL)
+def test_auth_invalid_password():
+    """TC-33: Авторизация с невалидным паролем"""
+
+    response = api.authorize(password=INVALID_PASSWORD)
+
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["forbidden"]
+    ), f"Ожидался статус {EXPECTED_STATUS['forbidden']}, получен {response.status_code}"
+
+    # Проверка  заголовка + парсинг JSON
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры ошибки
+    validate_403_error(data, "invalid")
 
 
 @allure.feature("Auth")
 @allure.story("POST /auth/authorize")
 @allure.severity(allure.severity_level.MINOR)
-def test_tc34_auth_short_login():
-    """TC-34: Регистрация с логином < 3 символов"""
+def test_auth_short_login():
+    """TC-34: Авторизация с логином < 3 символов"""
 
-    # Подготовка данных
-    user_data = {
-        "login": "us",
-        "password": "qwerty12345",
-        "timeout": 360,
-    }
+    response = api.authorize(login=SHORT_LOGIN)
 
-    # Отправка POST-запроса
-    try:
-        response = requests.post(AUTH_ENDPOINT, json=user_data, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        pytest.fail(f"Запрос к {AUTH_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["validation_error"]
+    ), f"Ожидался статус {EXPECTED_STATUS['validation_error']}, получен {response.status_code}"
 
-    assert response.status_code == 422, f"Ожидался 422, получен {response.status_code}"
+    # Проверка  заголовка + парсинг JSON
     validate_content_type(response)
     data = get_validated_json(response)
 
     # Проверка структуры ошибки
-    assert "detail" in data, "В ответе отсутствует поле detail"
-    detail = data["detail"]
-    assert isinstance(detail, list), "detail должен быть массивом"
-    assert len(detail) > 0, "detail пуст"
-
-    # Парсим первую ошибку
-    first_error = detail[0]
-
-    # Проверка обязательных полей
-    for field in ["type", "loc", "msg"]:
-        assert field in first_error, f"В ошибке отсутствует поле '{field}'"
-
-    # Проверка, loc (тип, размер, наполнение)
-    loc = first_error["loc"]
-    assert isinstance(loc, list), "loc не массив"
-    assert len(loc) > 0, "loc пуст"
-    assert "login" in loc, "loc не содержит упоминание о 'login'"
-
-    # Проверка, msg (тип, размер, наполнение)
-    msg = first_error["msg"].lower()
-    assert isinstance(msg, str), "msg не строка"
-    assert len(msg) > 0, "msg пуст"
-    assert "3 characters" in msg, "msg не содержит упоминание о '3 characters'"
+    validate_422_error(data, "login")
 
 
 @allure.feature("Auth")
 @allure.story("POST /auth/authorize")
-@allure.severity(allure.severity_level.MINOR)
-def test_tc35_auth_no_password():
-    """TC-35: Регистрация без поля password"""
+@allure.severity(allure.severity_level.NORMAL)
+def test_auth_no_password():
+    """TC-35: Авторизация без поля password"""
 
-    # Подготовка данных
-    user_data = {
-        "login": "user_" + str(int(time.time())),
-        "timeout": 360,
-    }
+    response = api.authorize(password=None)
 
-    # Отправка POST-запроса
-    try:
-        response = requests.post(AUTH_ENDPOINT, json=user_data, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        pytest.fail(f"Запрос к {AUTH_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["validation_error"]
+    ), f"Ожидался статус {EXPECTED_STATUS['validation_error']}, получен {response.status_code}"
 
-    assert response.status_code == 422, f"Ожидался 422, получен {response.status_code}"
+    # Проверка  заголовка + парсинг JSON
     validate_content_type(response)
     data = get_validated_json(response)
 
     # Проверка структуры ошибки
-    assert "detail" in data, "В ответе отсутствует поле detail"
-    detail = data["detail"]
-    assert isinstance(detail, list), "detail должен быть массивом"
-    assert len(detail) > 0, "detail пуст"
-
-    # Парсим первую ошибку
-    first_error = detail[0]
-
-    # Проверка обязательных полей
-    for field in ["type", "loc", "msg"]:
-        assert field in first_error, f"В ошибке отсутствует поле '{field}'"
-
-    # Проверка, loc (тип, размер, наполнение)
-    loc = first_error["loc"]
-    assert isinstance(loc, list), "loc не массив"
-    assert len(loc) > 0, "loc пуст"
-    assert "password" in loc, "loc не содержит упоминание о 'password'"
-
-    # Проверка, msg (тип, размер, наполнение)
-    msg = first_error["msg"].lower()
-    assert isinstance(msg, str), "msg не строка"
-    assert len(msg) > 0, "msg пуст"
-    assert "required" in msg, "msg не содержит упоминание о 'required'"
+    validate_422_error(data, "password")
 
 
+@pytest.mark.smoke
 @allure.feature("Auth")
 @allure.story("GET /auth/me")
-@allure.severity(allure.severity_level.BLOCKER)
-def test_tc36_me_success(auth_token):
+@allure.severity(allure.severity_level.CRITICAL)
+def test_me_success(auth_token):
     """TC-36: /me с валидным токеном"""
 
-    # Подготовка данных
-    headers = {"x-token": auth_token}
+    response = api.get_me(auth_token)
 
-    # Отправка GET-запроса
-    try:
-        response = requests.get(ME_ENDPOINT, headers=headers, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        pytest.fail(f"Запрос к {ME_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
 
-    assert response.status_code == 200, f"Ожидался 200, получен {response.status_code}"
+    # Проверка  заголовка + парсинг JSON
     validate_content_type(response)
     data = get_validated_json(response)
 
     # Проверка наличия обязательных полей
-    validate_response_structure(data, ["user_name", "email_address", "valid_till"])
-
-    # Проверка типов полей
-    assert isinstance(data["user_name"], str), f"user_name должен быть строкой"
-    assert isinstance(data["email_address"], str), f"email_address должен быть строкой"
-    assert isinstance(data["valid_till"], str), f"valid_till должен быть строкой"
-
-    # Проверка, что поля не пустые
-    assert len(data["user_name"]) > 0, "user_name пустой"
-    assert len(data["email_address"]) > 0, "email_address пустой"
-    assert len(data["valid_till"]) > 0, "valid_till пустой"
+    validate_response_structure(data, AUTH_ME_REQUIRED_FIELDS)
+    fields = [
+        ("user_name", str),
+        ("email_address", str),
+        ("valid_till", str),
+    ]
+    validate_fields_presence_and_type(data, fields)
 
 
 @allure.feature("Auth")
 @allure.story("GET /auth/me")
-def test_tc37_me_no_token():
+@allure.severity(allure.severity_level.MINOR)
+def test_me_no_token():
     """TC-37: /me без заголовка x-token"""
 
-    # Отправка GET-запроса
-    try:
-        response = requests.get(ME_ENDPOINT, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        pytest.fail(f"Запрос к {ME_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
+    response = api.get_me()
 
-    assert response.status_code == 401, f"Ожидался 401, получен {response.status_code}"
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["unauthorized"]
+    ), f"Ожидался статус {EXPECTED_STATUS['unauthorized']}, получен {response.status_code}"
+
+    # Проверка  заголовка + парсинг JSON
     validate_content_type(response)
     data = get_validated_json(response)
 
     # Проверка структуры ошибки
-    assert "detail" in data, "В ответе отсутствует поле detail"
-
-    detail = data["detail"]
-    assert isinstance(detail, dict), "detail должен быть объектом (dict)"
-    assert "reason" in detail, "В detail отсутствует поле reason"
-
-    reason = detail["reason"].lower()
-    assert isinstance(reason, str), "reason должен быть строкой"
-    assert len(reason) > 0, "reason не должен быть пустой"
-    assert "auth" in reason, f"reason не содержит 'auth'. reason {reason}"
+    validate_401_error(data, "auth")
 
 
 @allure.feature("Auth")
 @allure.story("GET /auth/me")
-def test_tc38_me_invalid_token():
+@allure.severity(allure.severity_level.MINOR)
+def test_me_invalid_token():
     """TC-38: /me с невалидным токеном"""
 
-    # Подготовка данных
-    headers = {"x-token": "invalid_token_123"}
+    response = api.get_me(INVALID_TOKEN)
 
-    # Отправка GET-запроса
-    try:
-        response = requests.get(ME_ENDPOINT, headers=headers, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        pytest.fail(f"Запрос к {ME_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["forbidden"]
+    ), f"Ожидался статус {EXPECTED_STATUS['forbidden']}, получен {response.status_code}"
 
-    assert response.status_code == 403, f"Ожидался 403, получен {response.status_code}"
+    # Проверка  заголовка + парсинг JSON
     validate_content_type(response)
     data = get_validated_json(response)
 
     # Проверка структуры ошибки
-    assert "detail" in data, "В ответе отсутствует поле detail"
-
-    detail = data["detail"]
-    assert isinstance(detail, dict), "detail должен быть объектом (dict)"
-    assert "reason" in detail, "В detail отсутствует поле reason"
-
-    reason = detail["reason"].lower()
-    assert isinstance(reason, str), "reason должен быть строкой"
-    assert len(reason) > 0, "reason не должен быть пустой"
-    assert "token" in reason, f"reason не содержит 'token'. reason {reason}"
+    validate_403_error(data, "token")
 
 
 @allure.feature("Auth")
 @allure.story("GET /auth/me")
-def test_tc39_token_expires():
+@allure.severity(allure.severity_level.MINOR)
+def test_token_expires():
     """TC-39: Проверка истечения токена"""
 
-    # Подготовка данных
-    user_data = {
-        "login": "user_" + str(int(time.time())),
-        "password": "qwerty12345",
-        "timeout": 1,
-    }
+    response = api.authorize(timeout_sec=2)
 
-    # Отправка POST-запроса
-    try:
-        auth_response = requests.post(AUTH_ENDPOINT, json=user_data, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        pytest.fail(f"Запрос к {AUTH_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
-
+    # Проверка статуса
     assert (
-        auth_response.status_code == 200
-    ), f"Ожидался 200, получен {auth_response.status_code}"
-    validate_content_type(auth_response)
-    data = get_validated_json(auth_response)
+        response.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
 
-    assert "token" in data, "В ответе отсутствует поле token"
+    # Проверка  заголовка + парсинг JSON
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # token — обязательное поле, строка, не пустая
+    validate_fields_presence_and_type(data, ("token", str))
     token = data["token"]
-    assert isinstance(token, str), "token должен быть строкой"
-    assert len(token) > 0, "token не должен быть пустым"
 
     # Подождать 2 секунды (чтобы токен истёк)
     time.sleep(2)
 
     # Попробовать получить /me с этим токеном
-    headers = {"x-token": token}
-    try:
-        response = requests.get(ME_ENDPOINT, headers=headers, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        pytest.fail(f"Запрос к {ME_ENDPOINT} превысил таймаут {TIMEOUT} сек.")
+    response = api.get_me(token)
 
-    assert response.status_code == 403, f"Ожидался 403, получен {response.status_code}"
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["forbidden"]
+    ), f"Ожидался статус {EXPECTED_STATUS['forbidden']}, получен {response.status_code}"
+
+    # Проверка  заголовка + парсинг JSON
     validate_content_type(response)
     data = get_validated_json(response)
 
     # Проверка структуры ошибки
-    assert "detail" in data, "В ответе отсутствует поле detail"
-
-    detail = data["detail"]
-    assert isinstance(detail, dict), "detail должен быть объектом (dict)"
-    assert "reason" in detail, "В detail отсутствует поле reason"
-
-    reason = detail["reason"].lower()
-    assert isinstance(reason, str), "reason должен быть строкой"
-    assert len(reason) > 0, "reason не должен быть пустой"
-    assert "token" in reason, f"reason не содержит 'token'. reason {reason}"
+    validate_403_error(data, "token")

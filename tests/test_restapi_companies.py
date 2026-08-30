@@ -1,43 +1,47 @@
 """Автотесты для API restapi.tech
 Эндпоинт: /companies
 Документация: https://restapi.tech
+Тесты: TC-1 – TC-12
 """
 
-import requests
-import constants
 import pytest
 import allure
 from utils.helpers import (
     validate_content_type,
     get_validated_json,
     validate_response_structure,
+    validate_meta,
+    validate_companies_list,
+    validate_422_error,
+    validate_404_error,
+    validate_fields_presence_and_type,
+)
+from data.expected_status import EXPECTED_STATUS
+from api.companies_api import CompaniesAPI
+from data.companies_data import (
+    COMPANY_REQUIRED_FIELDS,
+    TRANSLATION_REQUIRED_FIELDS,
 )
 
-# ========== Настройки ==========
-BASE_URL = "https://restapi.tech/api"
-TIMEOUT = 5
-COMPANIES_ENDPOINT = f"{BASE_URL}/companies"
+api = CompaniesAPI()
 
 
-# ========== Тесты ==========
+# ========== ТЕСТЫ ==========
 @pytest.mark.smoke
 @allure.feature("Companies")
 @allure.story("GET /companies")
 @allure.severity(allure.severity_level.CRITICAL)
-def test_tc01_get_all_companies():
+def test_get_all_companies():
     """TC-01: Базовый GET-запрос на получение всех компаний"""
 
-    # Отправка GET-запроса
-    try:
-        response = requests.get(COMPANIES_ENDPOINT, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+    response = api.get_all_companies()
 
-    # Проверка статуса, заголовка + парсинг JSON
-    assert response.status_code == 200, (
-        f"Запрос к {COMPANIES_ENDPOINT} вернул статус {response.status_code}. "
-        f"Ожидался 200"
-    )
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
+
+    # Проверка аголовка + парсинг JSON
     validate_content_type(response)
     data = get_validated_json(response)
 
@@ -48,378 +52,156 @@ def test_tc01_get_all_companies():
     assert companies, "Массив 'data' пуст"
 
     # Валидация обязательных полей первой компании
-    for field in constants.COMPANY_REQUIRED_FIELDS:
-        assert field in companies[0], f"В компании отсутствует поле '{field}'"
+    validate_companies_list(companies, COMPANY_REQUIRED_FIELDS)
 
 
+@pytest.mark.parametrize(
+    "limit_value, expected_status",
+    [
+        (5, EXPECTED_STATUS["valid"]),
+        (0, EXPECTED_STATUS["valid"]),
+        ("abc", EXPECTED_STATUS["validation_error"]),
+    ],
+)
 @allure.feature("Companies")
 @allure.story("GET /companies")
 @allure.severity(allure.severity_level.NORMAL)
-def test_tc02_get_companies_with_limit():
-    """ТС-02: Параметр limit ограничивает количество компаний"""
+def test_companies_limit(limit_value, expected_status):
+    """TC-02, TC-06, TC-07: Параметризованный тест для limit"""
 
-    # Подготовка данных
-    limit_value = 5
+    response = api.get_companies_with_params(limit=limit_value)
 
-    # Отправка GET-запроса с limit
-    try:
-        response = requests.get(
-            COMPANIES_ENDPOINT, params={"limit": limit_value}, timeout=TIMEOUT
-        )
-    except requests.exceptions.Timeout:
-        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+    # Проверка статуса
+    assert (
+        response.status_code == expected_status
+    ), f"Ожидался статус {expected_status}, получен {response.status_code}"
 
-    # Проверка статуса, заголовка + парсинг JSON
-    assert response.status_code == 200, (
-        f"Запрос к {COMPANIES_ENDPOINT} с параметрами {{'limit': {limit_value}}} "
-        f"вернул статус {response.status_code}. Ожидался 200"
-    )
-    validate_content_type(response)
-    data = get_validated_json(response)
+    # Если статус валидный, парсим JSON, проверяем структуру
+    if expected_status == EXPECTED_STATUS["valid"]:
+        data = get_validated_json(response)
+        validate_response_structure(data, ["data", "meta"])
+        validate_meta(data["meta"], expected_limit=limit_value)
 
-    # Проверка, что meta.limit соответствует запросу
-    assert data["meta"]["limit"] == limit_value
+        if limit_value == 0:
+            assert data["data"] == [], "При limit=0 data должен быть пустым"
+        else:
+            assert (
+                len(data["data"]) <= limit_value
+            ), "Количество компаний не должно превышать limit"
 
-    # Проверка, что количество компаний в data не больше limit
-    companies = data["data"]
-    assert companies, "Массив 'data' пуст"
-    assert len(companies) <= limit_value
+    else:
+        # 422 — проверяем структуру ошибки
+        error_data = get_validated_json(response)
+        validate_422_error(error_data, "limit")
 
 
+@pytest.mark.parametrize(
+    "offset_value, expected_status, expected_first_id",
+    [
+        (2, EXPECTED_STATUS["valid"], 3),
+        (-1, EXPECTED_STATUS["valid"], 1),
+    ],
+)
 @allure.feature("Companies")
 @allure.story("GET /companies")
 @allure.severity(allure.severity_level.NORMAL)
-def test_tc03_get_companies_with_offset():
-    """ТС-03: Параметр offset сдвигает количество компаний"""
+def test_companies_offset(offset_value, expected_status, expected_first_id):
+    """TC-03, TC-08: Параметризованный тест для offset"""
 
-    # Подготовка данных
-    offset_value = 2
-    limit_value = 3  # по умолчанию limit=3 в API
+    response = api.get_companies_with_params(offset=offset_value, limit=3)
 
-    # Отправка GET-запроса
-    try:
-        response = requests.get(
-            COMPANIES_ENDPOINT,
-            params={"offset": offset_value, "limit": limit_value},
-            timeout=TIMEOUT,
-        )
-    except requests.exceptions.Timeout:
-        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
+    # Проверка статуса
+    assert (
+        response.status_code == expected_status
+    ), f"Ожидался статус {expected_status}, получен {response.status_code}"
 
-    # Проверка статуса, заголовка + парсинг JSON
-    assert response.status_code == 200, (
-        f"Запрос к {COMPANIES_ENDPOINT} с параметрами {{'offset': {offset_value}, 'limit': {limit_value}}} "
-        f"вернул статус {response.status_code}. Ожидался 200"
-    )
-    validate_content_type(response)
+    # Парсим JSON, проверяем структуру
     data = get_validated_json(response)
-
-    # Проверка структуры ответа
     validate_response_structure(data, ["data", "meta"])
+    validate_meta(data["meta"], expected_offset=offset_value, expected_limit=3)
 
     companies = data["data"]
-    meta = data["meta"]
+    assert companies, "data пустой"
+    validate_response_structure(companies[0], COMPANY_REQUIRED_FIELDS)
 
-    # Проверка полей meta
+    # Проверка сдвига: первая компания должна иметь ожидаемый ID
     assert (
-        meta["offset"] == offset_value
-    ), f"meta.offset={meta['offset']}, но ожидался {offset_value}"
-    assert (
-        meta["limit"] == limit_value
-    ), f"meta.limit={meta['limit']}, но ожидался {limit_value}"
-
-    # Если offset >= total, массив может быть пустым
-    total_companies = meta["total"]
-    if offset_value >= total_companies:
-        assert not companies, (
-            f"При offset={offset_value} (total={total_companies}) ожидался пустой массив, "
-            f"но получен {len(companies)} компаний."
-        )
-        return
-
-    # Проверка, что количество компаний не превышает limit
-    assert (
-        len(companies) <= limit_value
-    ), f"Количество компаний ({len(companies)}) превышает limit={limit_value}"
-    assert companies, "data пустой массив"
-
-    # Проверка наличия компаний
-    for field in constants.COMPANY_REQUIRED_FIELDS:
-        assert field in companies[0], f"В компании отсутствует поле '{field}'"
-
-    # ГЛАВНАЯ ПРОВЕРКА: компания на позиции offset имеет ID = offset + 1
-    actual_company_id = companies[0]["company_id"]
-    expected_company_id = offset_value + 1
-
-    assert actual_company_id == expected_company_id, (
-        f"Компания на позиции offset={offset_value} некорректна. "
-        f"Ожидался ID {expected_company_id}, получен {actual_company_id}"
-    )
+        companies[0]["company_id"] == expected_first_id
+    ), f"При offset={offset_value} ожидался ID {expected_first_id}, получен {companies[0]['company_id']}"
 
 
+@pytest.mark.parametrize(
+    "status_value, expected_status",
+    [
+        ("ACTIVE", EXPECTED_STATUS["valid"]),
+        ("INVALID", EXPECTED_STATUS["validation_error"]),
+    ],
+)
 @allure.feature("Companies")
 @allure.story("GET /companies")
 @allure.severity(allure.severity_level.NORMAL)
-def test_tc04_get_companies_filter_by_active_status():
-    """TC-04: Фильтрация компаний по статусу ACTIVE"""
+def test_companies_status(status_value, expected_status):
+    """TC-04, TC-05: Параметризованный тест для status"""
 
-    # Подготовка данных
-    status_value = "ACTIVE"
+    response = api.get_companies_with_params(status=status_value)
 
-    # Отправка GET-запроса со статусом
-    try:
-        response = requests.get(
-            COMPANIES_ENDPOINT, params={"status": status_value}, timeout=TIMEOUT
-        )
-    except requests.exceptions.Timeout:
-        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
-
-    # Проверка статуса, заголовка + парсинг JSON
-    assert response.status_code == 200, (
-        f"Запрос к {COMPANIES_ENDPOINT} с параметрами {{'status': {status_value}}} "
-        f"вернул статус {response.status_code}. Ожидался 200"
-    )
-    validate_content_type(response)
-    data = get_validated_json(response)
-
-    # Проверка структуры ответа
-    validate_response_structure(data, ["data", "meta"])
-
-    companies = data["data"]
-    assert companies, f"Массив 'data' пуст, нет компаний со статусом {status_value}"
-
-    # Проверка, что у всех компаний статус соответствует запросу
-    for company in companies:
-        assert (
-            company["company_status"] == status_value
-        ), f"Ожидался статус {status_value}, получен {company['company_status']}"
-
-
-@allure.feature("Companies")
-@allure.story("GET /companies")
-@allure.severity(allure.severity_level.MINOR)
-def test_tc05_invalid_status_returns_422():
-    """TC-05: Проверка корректности ошибки при невалидном статусе"""
-
-    # Подготовка данных
-    status_value = "INVALID"
-
-    # Отправка GET-запроса
-    try:
-        response = requests.get(
-            COMPANIES_ENDPOINT, params={"status": status_value}, timeout=TIMEOUT
-        )
-    except requests.exceptions.Timeout:
-        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
-
-    # Проверка статуса и заголовка
-    assert response.status_code == 422, (
-        f"Запрос к {COMPANIES_ENDPOINT} с параметрами {{'status': status_value}} "
-        f"вернул статус {response.status_code}. Ожидался 422"
-    )
-    validate_content_type(response)
-
-    # Парсинг JSON
-    error_data = get_validated_json(response)
-
-    # Проверка структуры detail
-    assert "detail" in error_data, "В ответе отсутствует поле 'detail'"
-    detail = error_data["detail"]
-    assert isinstance(detail, list), "detail должен быть массивом"
-    assert len(detail) > 0, "detail пуст"
-
-    # Извлекаем первую ошибку
-    first_error = detail[0]
-
-    # Проверка обязательных полей ошибки
-    for field in ["type", "loc", "msg"]:
-        assert field in first_error, f"В ошибке отсутствует поле '{field}'"
-
-    # Проверка, что сообщение об ошибке содержит упоминание допустимых статусов
-    assert any(
-        status in first_error["msg"] for status in constants.VALID_STATUSES
-    ), f"Сообщение об ошибке не содержит ни одного из допустимых статусов: {constants.VALID_STATUSES}"
-
-
-@allure.feature("Companies")
-@allure.story("GET /companies")
-@allure.severity(allure.severity_level.MINOR)
-def test_tc06_limit_zero_returns_empty_data():
-    """TC-06: limit=0 возвращает статус 200 и пустой массив data"""
-
-    # Подготовка данных
-    limit_value = 0
-
-    # Отправка GET-запроса
-    try:
-        response = requests.get(
-            COMPANIES_ENDPOINT, params={"limit": limit_value}, timeout=TIMEOUT
-        )
-    except requests.exceptions.Timeout:
-        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
-
-    # Проверка статуса, заголовка парсинг JSON
-    assert response.status_code == 200, (
-        f"Запрос к {COMPANIES_ENDPOINT} с параметром {{'limit': {limit_value}}} "
-        f"вернул статус {response.status_code}. Ожидался 200"
-    )
-    validate_content_type(response)
-    data = get_validated_json(response)
-
-    # Проверка структуры data
-    validate_response_structure(data, ["data", "meta"])
-
-    # Проверка, что limit=0
-    limit = data["meta"]["limit"]
-    assert limit == limit_value, f"'limit' равен {limit}, а должно быть {limit_value}"
-
-    # Проверка, что data пустой
-    companies = data["data"]
-    assert isinstance(companies, list), "'data' должен быть массивом"
-    assert not companies, f"Массив 'data' не пустой"
-
-
-@allure.feature("Companies")
-@allure.story("GET /companies")
-@allure.severity(allure.severity_level.MINOR)
-def test_tc07_limit_abc_returns_422():
-    """TC-07: limit=abc возвращает статус 422 и detail об ошибке"""
-
-    # Подготовка данных
-    limit_value = "abc"
-
-    # Отправка GET-запроса
-    try:
-        response = requests.get(
-            COMPANIES_ENDPOINT, params={"limit": limit_value}, timeout=TIMEOUT
-        )
-    except requests.exceptions.Timeout:
-        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
-
-    # Проверка статуса и заголовка
-    assert response.status_code == 422, (
-        f"Запрос к {COMPANIES_ENDPOINT} с параметром {{'limit': {limit_value}}} "
-        f"вернул статус {response.status_code}. Ожидался 422"
-    )
-    validate_content_type(response)
-
-    # Парсинг JSON
-    error_data = get_validated_json(response)
-
-    # Проверка, что в ответе есть detail, массив и не пустой
-    assert "detail" in error_data, "В ответе отсутствует поле 'detail'"
-    detail = error_data["detail"]
-    assert isinstance(detail, list), "detail должен быть массивом"
-    assert len(detail) > 0, "detail пуст"
-
-    # Извлекаем первую ошибку
-    first_error = detail[0]
-
-    # Проверка обязательных полей
-    for field in ["type", "loc", "msg"]:
-        assert field in first_error, f"В ошибке отсутствует {field}"
-
-    # Проверка типа поля ошибки и содержание
-    assert isinstance(first_error["msg"], str), "Поле 'msg' не строка"
-    assert "integer" in first_error["msg"], "Сообщение об ошибке не содержит 'integer'"
-
-
-@allure.feature("Companies")
-@allure.story("GET /companies")
-@allure.severity(allure.severity_level.MINOR)
-def test_tc08_offset_negative_one_returns_no_shift():
-    """TC-08: offset=-1 возвращает статус 200, компании без сдвига"""
-
-    # Подготовка данных
-    offset_value = -1
-    limit_value = 3  # по умолчанию limit=3 в API
-
-    # Отправка GET-запроса
-    try:
-        response = requests.get(
-            COMPANIES_ENDPOINT,
-            params={"offset": offset_value, "limit": limit_value},
-            timeout=TIMEOUT,
-        )
-    except requests.exceptions.Timeout:
-        assert False, f"Запрос к {COMPANIES_ENDPOINT} превысил таймаут {TIMEOUT} сек."
-
-    # Проверка статуса, заголовка + парсинг JSON
-    assert response.status_code == 200, (
-        f"Запрос к {COMPANIES_ENDPOINT} с параметрами {{'offset': {offset_value}, 'limit': {limit_value}}} "
-        f"вернул статус {response.status_code}. Ожидался 200"
-    )
-    validate_content_type(response)
-    data = get_validated_json(response)
-
-    # Проверка структуры ответа
-    validate_response_structure(data, ["data", "meta"])
-
-    companies = data["data"]
-    meta = data["meta"]
-
-    # Проверка полей meta
+    # Проверка статуса + заголовка
     assert (
-        meta["offset"] == offset_value
-    ), f"meta.offset={meta['offset']}, но ожидался {offset_value}"
-    assert (
-        meta["limit"] == limit_value
-    ), f"meta.limit={meta['limit']}, но ожидался {limit_value}"
+        response.status_code == expected_status
+    ), f"Ожидался статус {expected_status}, получен {response.status_code}"
+    validate_content_type(response)
 
-    # Проверка, что массив с компаниями не пустой
-    assert companies, f"data пустой массив"
+    if expected_status == EXPECTED_STATUS["valid"]:
+        data = get_validated_json(response)
+        validate_response_structure(data, ["data", "meta"])
 
-    # Проверка обязательных полей в компании
-    for field in constants.COMPANY_REQUIRED_FIELDS:
-        assert field in companies[0], f"В компании отсутствует поле '{field}'"
+        companies = data["data"]
+        validate_companies_list(companies, COMPANY_REQUIRED_FIELDS)
 
-    # ГЛАВНАЯ ПРОВЕРКА: компании без сдвига
-    assert (
-        companies[0]["company_id"] == 1
-    ), f"Ожидался ID=1, получен {companies[0]['company_id']}, при offset={offset_value} произошел сдвиг"
+        # Проверка, что у всех компаний статус соответствует запросу
+        for company in companies:
+            assert (
+                company["company_status"] == status_value
+            ), f"Ожидался статус {status_value}, получен {company['company_status']}"
+    else:
+        # 422 — проверяем структуру ошибки
+        error_data = get_validated_json(response)
+        validate_422_error(error_data, "status")
 
 
 @pytest.mark.smoke
 @allure.feature("Companies")
 @allure.story("GET /companies/{id}")
 @allure.severity(allure.severity_level.CRITICAL)
-def test_tc09_get_company_by_id_1():
+def test_get_company_by_id():
     """TC-09: GET-запрос на получение компании по ID"""
 
-    # Подготовка данных
     company_id = 1
+    response = api.get_company_by_id(company_id)
 
-    # GET-запрос
-    try:
-        response = requests.get(f"{COMPANIES_ENDPOINT}/{company_id}", timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        assert (
-            False
-        ), f"Запрос к {COMPANIES_ENDPOINT}/{company_id} превысил таймаут {TIMEOUT} сек."
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
 
-    # Проверка статуса, заголовка + парсинг JSON
-    assert response.status_code == 200, (
-        f"Запрос к {COMPANIES_ENDPOINT}/{company_id} вернул статус "
-        f"{response.status_code}. Ожидался 200"
-    )
+    # Проверка заголовка + парсинг JSON
     validate_content_type(response)
     data = get_validated_json(response)
 
-    # Проверка полей компании
-    validate_response_structure(data, constants.COMPANY_REQUIRED_FIELDS)
+    # Проверка структуры ответа
+    validate_response_structure(data, COMPANY_REQUIRED_FIELDS)
 
-    # Проверка, что ID компании в ответе равен запрашиваемому ID
+    # ID компании в ответе равен запрашиваемому ID
     assert (
         data["company_id"] == company_id
     ), f"Запрошен {company_id}, получен {data['company_id']}"
 
-    # Проверка полей переводов
-    translation = data["description_lang"]
-    assert translation, f"description_lang пуст"
-    assert isinstance(translation, list), f"description_lang должен быть массивом"
+    # description_lang — обязательное поле, список, не пустой
+    validate_fields_presence_and_type(data, ("description_lang", list))
 
-    for item in translation:
-        for field in constants.TRANSLATION_REQUIRED_FIELDS:
+    # Проверка полей переводов
+    for item in data["description_lang"]:
+        for field in TRANSLATION_REQUIRED_FIELDS:
             assert field in item, f"В переводе отсутствует поле {field}"
         assert isinstance(
             item["translation_lang"], str
@@ -429,46 +211,33 @@ def test_tc09_get_company_by_id_1():
 
 @allure.feature("Companies")
 @allure.story("GET /companies/{id}")
-def test_tc10_get_company_by_id_1_with_accept_language_ru():
+@allure.severity(allure.severity_level.MINOR)
+def test_get_company_by_id_with_language():
     """TC-10: GET-запрос на получение компании по ID с заголовком определяющим язык"""
 
-    # Подготовка данных
     company_id = 1
     headers = {"Accept-Language": "RU"}
+    response = api.get_company_by_id(company_id, headers=headers)
 
-    # GET-запрос
-    try:
-        response = requests.get(
-            f"{COMPANIES_ENDPOINT}/{company_id}", headers=headers, timeout=TIMEOUT
-        )
-    except requests.exceptions.Timeout:
-        assert (
-            False
-        ), f"Запрос к {COMPANIES_ENDPOINT}/{company_id} превысил таймаут {TIMEOUT} сек."
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
 
-    # Проверка статуса, заголовка + парсинг JSON
-    assert response.status_code == 200, (
-        f"Запрос к {COMPANIES_ENDPOINT}/{company_id} вернул статус "
-        f"{response.status_code}. Ожидался 200"
-    )
+    # Проверка заголовка + парсинг JSON
     validate_content_type(response)
     data = get_validated_json(response)
 
-    # Проверка полей компании
-    validate_response_structure(data, constants.COMPANY_REQUIRED_FIELDS)
+    # Проверка структуры ответа
+    validate_response_structure(data, COMPANY_REQUIRED_FIELDS)
 
-    # Проверка, что ID компании в ответе равен запрашиваемому ID
+    # ID компании в ответе равен запрашиваемому ID
     assert (
         data["company_id"] == company_id
     ), f"Запрошен {company_id}, получен {data['company_id']}"
 
-    # Проверка, что description есть, что строка и не пустая
-    assert "description" in data, "Поле description отсутствует"
-    description = data["description"]
-    assert isinstance(description, str), "Поле description не строка"
-    assert description, "Поле description пустое"
-
-    # Проверка, что description_lang отсутствует
+    # Проверяем, что API вернул перевод на русском языке
+    validate_fields_presence_and_type(data, ("description", str))
     assert (
         "description_lang" not in data
     ), "Массив description_lang должен отсутствовать"
@@ -476,77 +245,43 @@ def test_tc10_get_company_by_id_1_with_accept_language_ru():
 
 @allure.feature("Companies")
 @allure.story("GET /companies/{id}")
-def test_tc11_get_company_by_id_9999_not_found():
+@allure.severity(allure.severity_level.MINOR)
+def test_get_company_by_id_not_found():
     """TC-11: GET-запрос на получение компании по несуществующему ID"""
 
-    # Подготовка данных
     company_id = 9999
+    response = api.get_company_by_id(company_id)
 
-    # GET-запрос
-    try:
-        response = requests.get(f"{COMPANIES_ENDPOINT}/{company_id}", timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        assert (
-            False
-        ), f"Запрос к {COMPANIES_ENDPOINT}/{company_id} превысил таймаут {TIMEOUT} сек."
+    # Проверка статуса
+    assert (
+        response.status_code == EXPECTED_STATUS["not_found"]
+    ), f"Ожидался статус {EXPECTED_STATUS['not_found']}, получен {response.status_code}"
 
-    # Проверка статуса, заголовка + парсинг JSON
-    assert response.status_code == 404, (
-        f"Запрос к {COMPANIES_ENDPOINT}/{company_id} вернул статус "
-        f"{response.status_code}. Ожидался 404"
-    )
+    # Проверка заголовка + парсинг JSON
     validate_content_type(response)
-    error_data = get_validated_json(response)
+    data = get_validated_json(response)
 
     # Проверка структуры ошибки
-    assert "detail" in error_data, "Поле detail отсутствует"
-    assert "reason" in error_data["detail"], "Поле reason отсутствует"
-    reason = error_data["detail"]["reason"]
-    assert isinstance(reason, str), "Поле reason не строка"
-    assert reason, "Поле reason пустое"
-    assert (
-        str(company_id) in reason
-    ), f"В тексте ошибки нет упоминания об id={company_id}"
+    validate_404_error(data, str(company_id))
 
 
 @allure.feature("Companies")
 @allure.story("GET /companies/{id}")
-def test_tc12_get_company_by_id_abc_invalid():
+@allure.severity(allure.severity_level.MINOR)
+def test_get_company_by_id_invalid():
     """TC-12: GET-запрос на получение компании по невалидному ID"""
 
-    # Подготовка данных
     company_id = "abc"
+    response = api.get_company_by_id(company_id)
 
-    # GET-запрос
-    try:
-        response = requests.get(f"{COMPANIES_ENDPOINT}/{company_id}", timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        assert (
-            False
-        ), f"Запрос к {COMPANIES_ENDPOINT}/{company_id} превысил таймаут {TIMEOUT} сек."
-
-    # Проверка статуса, заголовка + парсинг JSON
-    assert response.status_code == 422, (
-        f"Запрос к {COMPANIES_ENDPOINT}/{company_id} вернул статус "
-        f"{response.status_code}. Ожидался 422"
-    )
-    validate_content_type(response)
-    error_data = get_validated_json(response)
-
-    # Проверка структуры detail
-    assert "detail" in error_data, "В ответе отсутствует поле detail"
-    detail = error_data["detail"]
-    assert isinstance(detail, list), "detail должен быть массивом"
-    assert len(detail) > 0, "detail пуст"
-
-    # Извлекаем первую ошибку
-    first_error = detail[0]
-
-    # Проверка обязательных полей ошибки
-    for field in ["type", "loc", "msg"]:
-        assert field in first_error, f"В ошибке отсутствует поле '{field}'"
-
-    # Проверка, что сообщение об ошибке содержит упоминание допустимого типа integer
+    # Проверка статуса
     assert (
-        "integer" in first_error["msg"]
-    ), "Сообщение об ошибке не содержит упоминание об integer"
+        response.status_code == EXPECTED_STATUS["validation_error"]
+    ), f"Ожидался статус {EXPECTED_STATUS['validation_error']}, получен {response.status_code}"
+
+    # Проверка заголовка + парсинг JSON
+    validate_content_type(response)
+    data = get_validated_json(response)
+
+    # Проверка структуры ошибки
+    validate_422_error(data, "company_id")

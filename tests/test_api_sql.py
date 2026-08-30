@@ -2,25 +2,13 @@
 
 import pytest
 import requests
-import sqlite3
-import logging
-import os
 import allure
+from config import BASE_URL, TIMEOUT
+from conftest import logger
+from utils.helpers import get_validated_json, validate_content_type
 
 # ========== Настройки ==========
-BASE_URL = "https://restapi.tech/api"
 COMPANIES_ENDPOINT = f"{BASE_URL}/companies"
-TIMEOUT = 5
-
-# Режим отладки: True — старый файл удаляется, новый остается, False — старый и новый удаляются
-DEBUG_MODE = True
-
-# Имя файла БД
-DB_NAME = "test_companies.db"
-
-# ========== Логирование ==========
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 # ========== Вспомогательные функции ==========
@@ -37,39 +25,6 @@ def get_company_ids():
     companies = data["data"]
     assert isinstance(companies, list), "Поле 'data' должно быть списком"
     return [company["company_id"] for company in companies[:3]]  # Первые 3 ID
-
-
-# ========== Фикстура: БД и таблица ========
-@pytest.fixture(scope="session")
-def db_connection():
-    """Создаёт БД, таблицу, возвращает соединение"""
-
-    # Удаяет старый файл, если есть
-    if os.path.exists(DB_NAME):
-        os.remove(DB_NAME)
-        logger.info(f"Удален сарый файл БД: {DB_NAME}")
-
-    # Подключается
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    # Создает таблицу
-    cursor.execute(
-        """CREATE TABLE companies (id INTEGER PRIMARY KEY, name TEXT, address TEXT, status TEXT)"""
-    )
-    conn.commit()
-
-    logger.info("Таблица companies создана")
-
-    yield conn  # передаёт соединение в тесты
-
-    # После всех тестов
-    conn.close()
-    if not DEBUG_MODE and os.path.exists(DB_NAME):
-        os.remove(DB_NAME)
-        logger.info(f"Файл {DB_NAME} удален")
-    elif DEBUG_MODE:
-        logger.info(f"Режим DEBUG: файл {DB_NAME} оставлен для анализа")
 
 
 # ========== Тесты ==========
