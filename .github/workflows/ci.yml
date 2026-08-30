@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pytest requests allure-pytest
+          pip install pytest requests allure-pytest pytest-rerunfailures
 
       - name: Run tests
         run: pytest tests/ -v --alluredir=allure-results
