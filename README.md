@@ -153,6 +153,14 @@ BASE_URL = https://restapi.tech/api
 
 ## 🧪 Покрытие тестами
 
+### 🗄️ SQL + API интеграция
+
+| Тест | Проверка | Статус |
+|------|----------|--------|
+| `test_sql_with_api_companies` | Сохранение одной компании в БД | ✅ готов |
+| `test_sql_save_all_companies` | Сохранение всех компаний в БД | ✅ готов |
+| `test_sql_filter_active_companies` | Фильтрация по статусу в SQL | ✅ готов |
+
 ### /api/companies и /{id}
 
 | TC | Проверка | Статус |
@@ -195,14 +203,6 @@ BASE_URL = https://restapi.tech/api
 | TC-37 | /me без заголовка `x-token` (401) | ✅ |
 | TC-38 | /me с невалидным токеном (403) | ✅ |
 | TC-39 | Истечение токена (403) | ✅ |
-
-### 🗄️ SQL + API интеграция
-
-| Тест | Проверка | Статус |
-|------|----------|--------|
-| `test_sql_with_api_companies` | Сохранение одной компании в БД | ✅ готов |
-| `test_sql_save_all_companies` | Сохранение всех компаний в БД | ✅ готов |
-| `test_sql_filter_active_companies` | Фильтрация по статусу в SQL | ✅ готов |
 
 ---
 

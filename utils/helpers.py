@@ -37,7 +37,7 @@ def get_validated_json(response):
 
 def validate_response_structure(data, required_keys):
     """
-    Проверяет, что в ответе присутствуют все обязательные поля.
+    Проверяет наличие обязательных полей верхнего уровня.
 
     :param data: распарсенный JSON (dict)
     :param required_keys: список обязательных полей (list)
@@ -64,22 +64,9 @@ def validate_meta(meta, expected_offset=None, expected_limit=None):
         ), f"Ожидался limit={expected_limit}, получен meta.limit={meta['limit']}"
 
 
-def validate_companies_list(companies, required_fields):
-    """
-    Проверяет, что список компаний не пустой и у первой компании есть обязательные поля.
-
-    :param companies: список компаний из ответа API (data['data'])
-    :param required_fields: список обязательных полей (например, COMPANY_REQUIRED_FIELDS)
-    """
-    assert companies, "Список компаний пуст"
-    validate_response_structure(companies[0], required_fields)
-
-
 def validate_fields_presence_and_type(data, fields_with_types, allow_empty=False):
     """
-    Проверяет, что поле есть в ответе, имеет нужный тип.
-
-    Проверяет наличие и тип одного или нескольких полей.
+    Проверяет наличие и тип полей (одного или нескольких) у объекта.
 
     :param data: распарсенный JSON (dict)
     :param fields_with_types:
@@ -104,41 +91,54 @@ def validate_fields_presence_and_type(data, fields_with_types, allow_empty=False
             assert value, f"Поле '{field}' не должно быть пустым"
 
 
-def get_active_company_id():
-    """Возвращает ID первой активной компании (status=ACTIVE)"""
-    response = companies_api.get_companies_with_params(status="ACTIVE")
+def _fetch_companies(status=None, limit=None):
+    """
+    Внутренняя функция для получения списка компаний.
 
-    # Проверка статуса
+    :param status: статус компании (ACTIVE, BANKRUPT, CLOSED) — опционально
+    :param limit: лимит записей (по умолчанию None, в API дефолтное значение = 3)
+    :return: список компаний
+    """
+    params = {}
+    if status:
+        params["status"] = status
+    if limit:
+        params["limit"] = limit
+
+    response = companies_api.get_companies_with_params(**params)
+
+    # Проверка статуса, заголовка, парсинг JSON, проверка структуры ответа
     assert (
         response.status_code == EXPECTED_STATUS["valid"]
     ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
-
-    # Парсим JSON, проверяем структуру
+    validate_content_type(response)
     data = get_validated_json(response)
     validate_response_structure(data, ["data", "meta"])
 
     companies = data["data"]
-    assert companies, "Нет активных компаний"
+    assert companies, "Нет компаний"
+
+    # Проверяем поля первой компании
     validate_response_structure(companies[0], COMPANY_REQUIRED_FIELDS)
 
+    return companies
+
+
+def get_companies_ids():
+    """Возвращает ID первых трёх компаний"""
+    companies = _fetch_companies(limit=10)
+    return [company["company_id"] for company in companies[:3]]
+
+
+def get_active_company_id():
+    """Возвращает ID первой активной компании (status=ACTIVE)"""
+    companies = _fetch_companies(status="ACTIVE")
     return companies[0]["company_id"]
 
 
 def get_inactive_company_id():
     """Возвращает ID первой неактивной компании (status=CLOSED)"""
-    response = companies_api.get_companies_with_params(status="CLOSED")
-
-    assert (
-        response.status_code == EXPECTED_STATUS["valid"]
-    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
-
-    data = get_validated_json(response)
-    validate_response_structure(data, ["data", "meta"])
-
-    companies = data["data"]
-    assert companies, "Нет неактивных компаний"
-    validate_response_structure(companies[0], COMPANY_REQUIRED_FIELDS)
-
+    companies = _fetch_companies(status="CLOSED")
     return companies[0]["company_id"]
 
 

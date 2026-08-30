@@ -11,7 +11,6 @@ from utils.helpers import (
     get_validated_json,
     validate_response_structure,
     validate_meta,
-    validate_companies_list,
     validate_422_error,
     validate_404_error,
     validate_fields_presence_and_type,
@@ -20,6 +19,7 @@ from data.expected_status import EXPECTED_STATUS
 from api.companies_api import CompaniesAPI
 from data.companies_data import (
     COMPANY_REQUIRED_FIELDS,
+    COMPANY_REQUIRED_FIELDS_AND_TYPES,
     TRANSLATION_REQUIRED_FIELDS,
 )
 
@@ -41,7 +41,7 @@ def test_get_all_companies():
         response.status_code == EXPECTED_STATUS["valid"]
     ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
 
-    # Проверка аголовка + парсинг JSON
+    # Проверка заголовка + парсинг JSON
     validate_content_type(response)
     data = get_validated_json(response)
 
@@ -49,10 +49,10 @@ def test_get_all_companies():
     validate_response_structure(data, ["data", "meta"])
 
     companies = data["data"]
-    assert companies, "Массив 'data' пуст"
 
     # Валидация обязательных полей первой компании
-    validate_companies_list(companies, COMPANY_REQUIRED_FIELDS)
+    assert companies, "Список компаний пуст"
+    validate_fields_presence_and_type(companies[0], COMPANY_REQUIRED_FIELDS_AND_TYPES)
 
 
 @pytest.mark.parametrize(
@@ -156,7 +156,12 @@ def test_companies_status(status_value, expected_status):
         validate_response_structure(data, ["data", "meta"])
 
         companies = data["data"]
-        validate_companies_list(companies, COMPANY_REQUIRED_FIELDS)
+
+        # Валидация обязательных полей первой компании
+        assert companies, "Список компаний пуст"
+        validate_fields_presence_and_type(
+            companies[0], COMPANY_REQUIRED_FIELDS_AND_TYPES
+        )
 
         # Проверка, что у всех компаний статус соответствует запросу
         for company in companies:

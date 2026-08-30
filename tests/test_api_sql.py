@@ -1,57 +1,51 @@
 """Тесты с SQLite для API restapi.tech — интеграция API + БД"""
 
 import pytest
-import requests
 import allure
-from config import BASE_URL, TIMEOUT
+import json
+
+from api.companies_api import CompaniesAPI
+from data.expected_status import EXPECTED_STATUS
+from data.companies_data import (
+    COMPANY_REQUIRED_FIELDS,
+    COMPANY_REQUIRED_FIELDS_AND_TYPES,
+)
 from conftest import logger
-from utils.helpers import get_validated_json, validate_content_type
+from utils.helpers import (
+    get_validated_json,
+    validate_content_type,
+    validate_response_structure,
+    validate_fields_presence_and_type,
+    get_companies_ids,
+)
 
-# ========== Настройки ==========
-COMPANIES_ENDPOINT = f"{BASE_URL}/companies"
-
-
-# ========== Вспомогательные функции ==========
-def get_company_ids():
-    """Получает список ID компаний из /companies (берётся из data[])"""
-    response = requests.get(
-        f"{COMPANIES_ENDPOINT}", params={"limit": 100}, timeout=TIMEOUT
-    )
-    assert response.status_code == 200, f"API вернул статус {response.status_code}"
-
-    data = response.json()
-    assert "data" in data, f"Ожидался ключ 'data', но пришёл ответ: {list(data.keys())}"
-
-    companies = data["data"]
-    assert isinstance(companies, list), "Поле 'data' должно быть списком"
-    return [company["company_id"] for company in companies[:3]]  # Первые 3 ID
+companies_api = CompaniesAPI()
 
 
-# ========== Тесты ==========
+# ========== ТЕСТЫ ==========
+@pytest.mark.parametrize("company_id", get_companies_ids())
 @allure.feature("SQL + API")
 @allure.story("Сохранение компаний в БД")
 @allure.severity(allure.severity_level.NORMAL)
-@pytest.mark.parametrize("company_id", get_company_ids())
 def test_sql_with_api_companies(db_connection, company_id):
     """Проверяет, что данные компании из API корректно сохраняются в SQLite"""
 
-    # Получаем данные компании по ID
-    response = requests.get(f"{COMPANIES_ENDPOINT}/{company_id}", timeout=TIMEOUT)
-    assert response.status_code == 200, f"API вернул {response.status_code}"
+    # Получаем данные компании через API-клиент
+    response = companies_api.get_company_by_id(company_id)
+    assert (
+        response.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
 
-    # Парсинг JSON
-    data = response.json()
-    logger.info(f"Получены данные компании {company_id}: {data}")
+    # Парсим JSON через хелпер
+    validate_content_type(response)
+    company = get_validated_json(response)
+    logger.info(
+        f"Получены данные компании {company_id}:\n{json.dumps(company, indent=2, ensure_ascii=False)}"
+    )
 
-    # Проверяем структуру ответа
-    required_fields = [
-        "company_id",
-        "company_name",
-        "company_address",
-        "company_status",
-    ]
-    for field in required_fields:
-        assert field in data, f"Поле {field} отсутствует в ответе"
+    # Проверяем структуру ответа (поля компании)
+    validate_response_structure(company, COMPANY_REQUIRED_FIELDS)
+    validate_fields_presence_and_type(company, COMPANY_REQUIRED_FIELDS_AND_TYPES)
 
     # Берем соединение из фикстуры
     cursor = db_connection.cursor()
@@ -63,25 +57,25 @@ def test_sql_with_api_companies(db_connection, company_id):
     cursor.execute(
         "INSERT INTO companies (id, name, address, status) VALUES (?, ?, ?, ?)",
         (
-            data["company_id"],
-            data["company_name"],
-            data["company_address"],
-            data["company_status"],
+            company["company_id"],
+            company["company_name"],
+            company["company_address"],
+            company["company_status"],
         ),
     )
     db_connection.commit()
 
-    # Проверяем, что сохранилось
+    # Проверяем, что данные сохранились
     cursor.execute("SELECT * FROM companies WHERE id = ?", (company_id,))
     row = cursor.fetchone()
 
     assert row is not None, f"Компания с id={company_id} не найдена в БД"
     assert row == (
-        data["company_id"],
-        data["company_name"],
-        data["company_address"],
-        data["company_status"],
-    )
+        company["company_id"],
+        company["company_name"],
+        company["company_address"],
+        company["company_status"],
+    ), f"Данные в БД не совпадают: {row}"
 
     logger.info(f"Тест для компании {company_id} пройден")
 
@@ -92,30 +86,31 @@ def test_sql_with_api_companies(db_connection, company_id):
 def test_sql_save_all_companies(db_connection):
     """Сохраняем все компании из API в SQLite и проверяем количество"""
 
-    # Получаем список всех компаний из API
-    response = requests.get(
-        f"{COMPANIES_ENDPOINT}", params={"limit": 100}, timeout=TIMEOUT
-    )
-    assert response.status_code == 200, f"API вернул {response.status_code}"
+    # Получаем данные компании через API-клиент
+    response = companies_api.get_companies_with_params(limit=100)
+    assert (
+        response.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
 
-    # Парсинг JSON
-    data = response.json()
+    validate_content_type(response)
+    data = get_validated_json(response)
+    validate_response_structure(data, ["data", "meta"])
 
-    # Берём общее количество компаний из meta.total
     total_companies_from_api = data["meta"]["total"]
-
-    # Проверка структуры ответа
     companies = data["data"]
-    assert len(companies) > 0, "Список компаний пуст"
+
+    logger.info(
+        f"Получено {len(companies)} компаний из API. Всего по данным API: {total_companies_from_api}"
+    )
 
     # Берем соединение из фикстуры
     cursor = db_connection.cursor()
 
-    # Удаляем старую запись
+    # Удаляем старую запись, если есть (на случай повторного запуска)
     cursor.execute("DELETE FROM companies")
 
-    # Собираем список кортежей из данных компаний
-    data_for_insert = [
+    # Список кортежей из данных компаний
+    companies_data = [
         (
             company["company_id"],
             company["company_name"],
@@ -127,11 +122,8 @@ def test_sql_save_all_companies(db_connection):
 
     # Вставляем данные (4 поля)
     cursor.executemany(
-        """
-        INSERT INTO companies (id, name, address, status) 
-        VALUES (?, ?, ?, ?)
-        """,
-        data_for_insert,
+        """INSERT INTO companies (id, name, address, status) VALUES (?, ?, ?, ?)""",
+        companies_data,
     )
     db_connection.commit()
 
@@ -139,10 +131,12 @@ def test_sql_save_all_companies(db_connection):
     cursor.execute("SELECT COUNT(*) FROM companies")
     count_in_db = cursor.fetchone()[0]
 
-    # Сравниваем количество компаний из API и БД
+    # Сравниваем количество
     assert (
         count_in_db == total_companies_from_api
     ), f"В БД {count_in_db} записей, в API {total_companies_from_api}"
+
+    logger.info("Тест пройден: в БД {count_in_db} записей")
 
 
 @allure.feature("SQL + API")
@@ -151,36 +145,33 @@ def test_sql_save_all_companies(db_connection):
 def test_sql_filter_active_companies(db_connection):
     """Проверяем SQL-запрос с фильтрацией по статусу"""
 
-    # Получаем список всех компаний из API
-    response_all = requests.get(
-        f"{COMPANIES_ENDPOINT}", params={"limit": 100}, timeout=TIMEOUT
-    )
-    assert response_all.status_code == 200, f"API вернул {response_all.status_code}"
-
-    # Парсинг JSON
-    data_all = response_all.json()
-
-    # Сохраняем список всех компаний
-    companies = data_all["data"]
-
-    # Получаем только ACTIVE
-    response_active = requests.get(
-        f"{COMPANIES_ENDPOINT}",
-        params={"limit": 100, "status": "ACTIVE"},
-        timeout=TIMEOUT,
-    )
+    response = companies_api.get_companies_with_params(limit=100)
     assert (
-        response_active.status_code == 200
-    ), f"API вернул {response_active.status_code}"
+        response.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
 
-    # Парсинг JSON
-    data_active = response_active.json()
+    validate_content_type(response)
+    all_data = get_validated_json(response)
+    validate_response_structure(all_data, ["data", "meta"])
 
-    # Сохраняем список компаний со статусом
-    companies_active = data_active["data"]
+    all_companies = all_data["data"]
 
-    # Сохраняем количество компаний со статусом
-    count_api_active = len(companies_active)
+    logger.info(f"Получено всего – {len(all_companies)} компаний из API.")
+
+    response = companies_api.get_companies_with_params(limit=100, status="ACTIVE")
+    assert (
+        response.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response.status_code}"
+
+    validate_content_type(response)
+    data = get_validated_json(response)
+    validate_response_structure(data, ["data", "meta"])
+
+    active_companies = data["data"]
+
+    logger.info(
+        f"Получено компаний со статусом ACTIVE – {len(active_companies)} из API."
+    )
 
     # Берем соединение из фикстуры
     cursor = db_connection.cursor()
@@ -188,15 +179,15 @@ def test_sql_filter_active_companies(db_connection):
     # Удаляем старую запись
     cursor.execute("DELETE FROM companies")
 
-    # Собираем список кортежей из данных компаний
-    data_for_insert = [
+    # Список кортежей из данных компаний
+    companies_data = [
         (
             company["company_id"],
             company["company_name"],
             company["company_address"],
             company["company_status"],
         )
-        for company in companies
+        for company in all_companies
     ]
 
     # Вставляем данные (4 поля)
@@ -205,7 +196,7 @@ def test_sql_filter_active_companies(db_connection):
         INSERT INTO companies (id, name, address, status) 
         VALUES (?, ?, ?, ?)
         """,
-        data_for_insert,
+        companies_data,
     )
     db_connection.commit()
 
@@ -216,11 +207,13 @@ def test_sql_filter_active_companies(db_connection):
     logger.debug(f"SQL результат: {sql_active_rows}")
 
     # Сравниваем количество
-    assert len(sql_active_rows) == count_api_active, (
+    assert len(sql_active_rows) == len(active_companies), (
         f"В БД {len(sql_active_rows)} записей со статусом ACTIVE, "
-        f"в API {count_api_active}"
+        f"в API {len(active_companies)}"
     )
 
     # Проверить статус каждой записи
     for row in sql_active_rows:
         assert row[3] == "ACTIVE", f"Ожидался статус ACTIVE, получен {row[3]}"
+
+    logger.info(f"Тест пройден: в БД {len(sql_active_rows)} записей")

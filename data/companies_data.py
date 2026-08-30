@@ -18,6 +18,13 @@ COMPANY_REQUIRED_FIELDS = [
     "company_status",
 ]
 
+COMPANY_REQUIRED_FIELDS_AND_TYPES = [
+    ("company_id", int),
+    ("company_name", str),
+    ("company_address", str),
+    ("company_status", str),
+]
+
 # Допустимые статусы
 VALID_STATUSES = ["ACTIVE", "CLOSED", "BANKRUPT"]
 
