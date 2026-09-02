@@ -5,11 +5,13 @@ import allure
 import json
 
 from api.companies_api import CompaniesAPI
+from api.users_api import UsersAPI
 from data.expected_status import EXPECTED_STATUS
 from data.companies_data import (
     COMPANY_REQUIRED_FIELDS,
     COMPANY_REQUIRED_FIELDS_AND_TYPES,
 )
+from data.users_data import USER_ALL_FIELDS_AND_TYPES
 from conftest import logger
 from utils.helpers import (
     get_validated_json,
@@ -20,6 +22,7 @@ from utils.helpers import (
 )
 
 companies_api = CompaniesAPI()
+users_api = UsersAPI()
 
 
 # ========== ТЕСТЫ ==========
@@ -27,7 +30,7 @@ companies_api = CompaniesAPI()
 @allure.feature("SQL + API")
 @allure.story("Сохранение компаний в БД")
 @allure.severity(allure.severity_level.NORMAL)
-def test_sql_with_api_companies(db_connection, company_id):
+def test_sql_save_company_by_id(db_connection, company_id):
     """Проверяет, что данные компании из API корректно сохраняются в SQLite"""
 
     # Получаем данные компании через API-клиент
@@ -142,7 +145,7 @@ def test_sql_save_all_companies(db_connection):
 @allure.feature("SQL + API")
 @allure.story("Сохранение одной компании")
 @allure.severity(allure.severity_level.MINOR)
-def test_sql_filter_active_companies(db_connection):
+def test_sql_filter_companies_by_status(db_connection):
     """Проверяем SQL-запрос с фильтрацией по статусу"""
 
     response = companies_api.get_companies_with_params(limit=100)
@@ -217,3 +220,115 @@ def test_sql_filter_active_companies(db_connection):
         assert row[3] == "ACTIVE", f"Ожидался статус ACTIVE, получен {row[3]}"
 
     logger.info(f"Тест пройден: в БД {len(sql_active_rows)} записей")
+
+
+@allure.feature("SQL + API")
+@allure.story("Сохранение пользователей и компаний")
+@allure.severity(allure.severity_level.NORMAL)
+def test_sql_join_users_with_companies(db_connection):
+    """Проверяем JOIN между пользователями и компаниями"""
+
+    # Получаем компании
+    response_companies = companies_api.get_companies_with_params(limit=10)
+    assert (
+        response_companies.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response_companies.status_code}"
+    validate_content_type(response_companies)
+    companies_data = get_validated_json(response_companies)
+    validate_response_structure(companies_data, ["data", "meta"])
+    companies = companies_data["data"]
+    validate_fields_presence_and_type(companies[0], COMPANY_REQUIRED_FIELDS_AND_TYPES)
+
+    logger.info(f"Получено {len(companies)} компаний")
+
+    # Получаем пользователей
+    response_users = users_api.get_users_with_params(limit=10)
+    assert (
+        response_users.status_code == EXPECTED_STATUS["valid"]
+    ), f"Ожидался статус {EXPECTED_STATUS['valid']}, получен {response_users.status_code}"
+    validate_content_type(response_users)
+    users_data = get_validated_json(response_users)
+    validate_response_structure(users_data, ["data", "meta"])
+    users = users_data["data"]
+    validate_fields_presence_and_type(users[0], USER_ALL_FIELDS_AND_TYPES)
+
+    logger.info(f"Получено {len(users)} пользователей")
+
+    # Берем соединение из фикстуры
+    cursor = db_connection.cursor()
+
+    # Удаляем старую запись, если есть (на случай повторного запуска)
+    cursor.execute("DELETE FROM companies")
+    cursor.execute("DELETE FROM users")
+
+    # Список кортежей из данных компаний
+    companies_row = [
+        (
+            company["company_id"],
+            company["company_name"],
+            company["company_address"],
+            company["company_status"],
+        )
+        for company in companies
+    ]
+
+    # Список кортежей из данных пользователей
+    users_row = [
+        (user["user_id"], user["first_name"], user["last_name"], user["company_id"])
+        for user in users
+    ]
+
+    # Вставляем данные компаний
+    cursor.executemany(
+        """INSERT INTO companies (id, name, address, status) VALUES (?, ?, ?, ?)""",
+        companies_row,
+    )
+    db_connection.commit()
+
+    # Вставляем данные пользователей
+    cursor.executemany(
+        """INSERT INTO users (id, first_name, last_name, company_id) VALUES (?, ?, ?, ?)""",
+        users_row,
+    )
+    db_connection.commit()
+
+    # JOIN
+    cursor.execute("""
+        SELECT u.id, u.first_name, u.last_name, c.name 
+        FROM users u 
+        JOIN companies c ON u.company_id = c.id
+    """)
+    join_result = cursor.fetchall()
+
+    logger.info(f"Результат JOIN: {len(join_result)} записей")
+
+    # Проверяем количество
+    assert len(join_result) == len(
+        users
+    ), f"Количество записей в JOIN-результате ({len(join_result)}) "
+    f"не совпадает с количеством пользователей ({len(users)}). "
+    f"Значит, у некоторых пользователей указан несуществующий company_id, "
+    f"и они не связались с таблицей companies."
+
+    # Проверяем, что у каждого есть компания
+    for row in join_result:
+        assert row[3] is not None, "У пользователя нет компании"
+
+    # Проверить, что компания не пустая
+    for row in join_result:
+        assert len(row[3]) > 0, "Название компании пустое"
+
+
+# ========== БУДУЩИЕ ТЕСТЫ (план) ==========
+
+# def test_sql_count_users_per_company():
+#     """Количество пользователей в каждой компании (GROUP BY)"""
+#     pass
+
+# def test_sql_users_without_company():
+#     """Пользователи, у которых нет компании (LEFT JOIN)"""
+#     pass
+
+# def test_sql_aggregate_active_companies():
+#     """Агрегация: активные компании и пользователи в них"""
+#     pass

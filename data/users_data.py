@@ -11,10 +11,19 @@ USER_REQUIRED_FIELDS_AND_TYPES = [
     ("user_id", int),
 ]
 
-# Поля пользователя (опциональные)
-USER_OPTIONAL_FIELDS = [
+# Поля пользователя (все)
+USER_ALL_FIELDS = [
+    "last_name",
+    "user_id",
     "first_name",
     "company_id",
+]
+
+USER_ALL_FIELDS_AND_TYPES = [
+    ("first_name", str),
+    ("last_name", str),
+    ("company_id", int),
+    ("user_id", int),
 ]
 
 # Тестовые данные

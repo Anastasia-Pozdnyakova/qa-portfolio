@@ -157,9 +157,13 @@ BASE_URL = https://restapi.tech/api
 
 | Тест | Проверка | Статус |
 |------|----------|--------|
-| `test_sql_with_api_companies` | Сохранение одной компании в БД | ✅ готов |
+| `test_sql_save_company_by_id` | Сохранение одной компании по ID в БД (параметризован: 1, 2, 3) | ✅ готов |
 | `test_sql_save_all_companies` | Сохранение всех компаний в БД | ✅ готов |
-| `test_sql_filter_active_companies` | Фильтрация по статусу в SQL | ✅ готов |
+| `test_sql_filter_companies_by_status` | Фильтрация компаний по статусу ACTIVE | ✅ готов |
+| `test_sql_join_users_with_companies` | JOIN пользователей и компаний | ✅ готов |
+| `test_sql_count_users_per_company` | Количество пользователей в каждой компании (GROUP BY) | 📋 планируется |
+| `test_sql_users_without_company` | Пользователи без компании (LEFT JOIN) | 📋 планируется |
+| `test_sql_aggregate_active_companies` | Агрегация: активные компании и пользователи в них | 📋 планируется |
 
 ### /api/companies и /{id}
 
