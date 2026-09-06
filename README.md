@@ -212,7 +212,7 @@ BASE_URL = https://restapi.tech/api
 
 ## 📸 Результаты тестов
 
-![Результаты pytest](assets/pytest_results.png)
+![Результаты pytest](assets/pytest_result.png)
 
 ---
 
