@@ -66,7 +66,7 @@ docker compose run --rm smoke
 docker compose run --rm allure
 ```
 
-После этого отчёт появится в папке allure-report. Открыть его можно через `allure open allure-report` или просто открыть index.html.
+После этого отчёт появится в папке `allure-report`. Открыть его можно через `allure open allure-report` или просто открыть index.html.
 
 ### Полная сборка и запуск
 ```bash
@@ -114,10 +114,10 @@ allure open allure-report
 
 1. Откройте Postman.
 
-2. Нажмите Import → выберите файл postman/restapi-tech-collection.json.
+2. Нажмите Import → выберите файл `postman/restapi-tech-collection.json`.
 
 3. Создайте окружение (Environment) с переменной:
-BASE_URL = https://restapi.tech/api
+`BASE_URL = https://restapi.tech/api`
 
 4. Запустите запросы и проверьте результаты тестов во вкладке Test Results.
 
@@ -135,10 +135,10 @@ newman run postman/restapi-tech-collection.json --environment postman/restapi-te
 
 | Тест | Проверка | Статус |
 |------|----------|--------|
-| `test_sql_save_company_by_id` | Сохранение одной компании по ID в БД (параметризован: 1, 2, 3) | ✅ готов |
-| `test_sql_save_all_companies` | Сохранение всех компаний в БД | ✅ готов |
-| `test_sql_filter_companies_by_status` | Фильтрация компаний по статусу ACTIVE | ✅ готов |
-| `test_sql_join_users_with_companies` | JOIN пользователей и компаний | ✅ готов |
+| `test_sql_save_company_by_id` | Сохранение одной компании по ID в БД (параметризован: 1, 2, 3) | ✅ |
+| `test_sql_save_all_companies` | Сохранение всех компаний в БД | ✅ |
+| `test_sql_filter_companies_by_status` | Фильтрация компаний по статусу ACTIVE | ✅ |
+| `test_sql_join_users_with_companies` | JOIN пользователей и компаний | ✅ |
 
 ### /api/companies и /{id}
 
