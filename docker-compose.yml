@@ -2,3 +2,19 @@ services:
   tests:
     build: .
     command: pytest tests/ -v
+    volumes:
+      - ./allure-results:/app/allure-results
+
+  smoke:
+    build: .
+    command: pytest tests/ -m smoke -v
+    volumes:
+      - ./allure-results:/app/allure-results
+      - ./allure-report:/app/allure-report
+
+  allure:
+    build: .
+    command: sh -c "pytest tests/ -v --alluredir==allure-results && allure generate allure-results -o allure-report --clean"
+    volumes:
+      - ./allure-results:/app/allure-results
+      - ./allure-report:/app/allure-report

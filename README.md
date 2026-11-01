@@ -6,6 +6,7 @@
 
 Портфолио с автотестами для тестирования REST API (restapi.tech).  
 Тесты написаны на pytest + requests, коллекция Postman прилагается.
+Запуск возможен локально и через Docker.
 
 ---
 
@@ -14,9 +15,11 @@
 - **Python 3.10+** — основной язык программирования
 - **pytest** — фреймворк для написания и запуска тестов
 - **requests** — библиотека для выполнения HTTP‑запросов
-- **Postman** — инструмент для ручного и автоматизированного тестирования API
+- **Allure** — генерация отчётов
+- **Docker / Docker Compose** — изолированный запуск тестов
+- **Postman / Newman** — ручное и автоматизированное тестирование API
 - **SQLite** — проверка данных через БД
-- **GitHub** — платформа для хранения портфолио
+- **GitHub Actions** — CI/CD
 
 ---
 
@@ -28,111 +31,86 @@
 | `tests/test_restapi_users.py` | pytest автотесты для `/users` |
 | `tests/test_restapi_auth.py` | pytest автотесты для `/auth` |
 | `tests/test_api_sql.py` | тесты интеграции API + SQLite |
-| `api/companies_api.py` | API-клиент для `/companies` |
-| `api/users_api.py` | API-клиент для `/users` |
-| `api/auth_api.py` | API-клиент для `/auth` |
-| `data/companies_data.py` | Тестовые данные для `/companies` |
-| `data/users_data.py` | Тестовые данные для `/users` |
-| `data/auth_data.py` | Тестовые данные для `/auth` |
-| `data/expected_status.py` | Ожидаемые статусы ответов |
+| `api/` | API-клиенты для `/companies`, `/users`, `/auth` |
+| `data/` | Тестовые данные и ожидаемые статусы |
 | `utils/helpers.py` | Вспомогательные функции |
 | `postman/restapi-tech-collection.json` | Postman коллекция |
-| `test-cases/companies.md` | Тест-кейсы для `/companies` |
-| `test-cases/users.md` | Тест-кейсы для `/users` |
-| `test-cases/auth.md` | Тест-кейсы для `/auth` |
-| `assets/pytest_results.png` | Скриншот результатов |
+| `test-cases/` | Тест-кейсы в Markdown |
+| `Dockerfile` | Инструкция сборки контейнера |
+| `docker-compose.yml` | Настройка сервисов для запуска тестов |
+| `requirements.txt` | Список зависимостей |
+| `assets/` | Скриншоты результатов |
 | `.gitignore` | Исключённые файлы |
 | `LICENSE` | Лицензия MIT |
 | `README.md` | Документация |
 
 ---
 
-## 🚀 Запуск автотестов (pytest)
+## 🐳 Запуск в Docker (рекомендуется)
 
-### 1. Установка зависимостей:
+### Требования
+- Docker Desktop
 
+### Запуск всех тестов
 ```bash
-pip install pytest requests
+docker compose run --rm tests
 ```
 
-### 2. Запуск всех тестов:
+### Запуск только smoke-тестов
+```bash
+docker compose run --rm smoke
+```
+
+### Запуск тестов с генерацией Allure-отчёта
+```bash
+docker compose run --rm allure
+```
+
+После этого отчёт появится в папке allure-report. Открыть его можно через `allure open allure-report` или просто открыть index.html.
+
+### Полная сборка и запуск
+```bash
+docker compose up --build
+```
+
+### Очистка
+```bash
+docker compose down
+```
+
+---
+
+## 🚀 Запуск локально
+
+### Установка зависимостей
+
+```bash
+pip install -r requirements.txt
+```
+
+### Запуск всех тестов
 
 ```bash
 pytest tests/ -v
 ```
 
-### 3. Запуск одного теста:
+### Запуск smoke-тестов
 
 ```bash
-pytest tests/test_restapi_companies.py::test_tc01_get_all_companies -v
+pytest tests/ -m smoke -v
 ```
 
-### 4. Запуск с подробным выводом и показом результатов для пройденных тестов:
-
-```bash
-pytest tests/ -v -s
-```
-
-### 5. Запуск тестов с генерацией отчёта в формате HTML:
-
-```bash
-pytest tests/ --html=report.html
-```
-
-### 6. Запуск Postman коллекции через Newman
-
-```bash
-newman run postman/restapi-tech-collection.json --environment postman/restapi-tech-environment.json
-```
----
-
-## 🚀 Запуск Postman коллекции через Newman
-
-### 1. Установка Newman:
-
-```bash
-npm install -g newman
-```
-
-### 2. Запуск коллекции через Newman:
-
-```bash
-newman run postman/restapi-tech-collection.json --environment postman/restapi-tech-environment.json
-```
-
----
-
-## 🚀 Генерация отчёта Allure
-
-### 1. Установка Allure:
-
-```bash
-brew install allure
-```
-
-### 2. Запуск тестов с Allure:
+### Генерация Allure-отчёта
 
 ```bash
 pytest tests/ --alluredir=allure-results
-```
-
-### 3. Сгенерировать отчёт:
-
-```bash
 allure generate allure-results -o allure-report --clean
-```
-
-### 4. Открыть отчёт:
-
-```bash
 allure open allure-report
 ```
 
 ---
 
 ## 📮 Postman коллекция
-
-Как импортировать и настроить:
 
 1. Откройте Postman.
 
@@ -143,11 +121,11 @@ BASE_URL = https://restapi.tech/api
 
 4. Запустите запросы и проверьте результаты тестов во вкладке Test Results.
 
-Что содержит коллекция:
+### Запуск через Newman
 
-1. Запросы к эндпоинтам API.
-
-2. Автоматизированные проверки на JavaScript.
+```bash
+newman run postman/restapi-tech-collection.json --environment postman/restapi-tech-environment.json
+```
 
 ---
 
@@ -161,9 +139,6 @@ BASE_URL = https://restapi.tech/api
 | `test_sql_save_all_companies` | Сохранение всех компаний в БД | ✅ готов |
 | `test_sql_filter_companies_by_status` | Фильтрация компаний по статусу ACTIVE | ✅ готов |
 | `test_sql_join_users_with_companies` | JOIN пользователей и компаний | ✅ готов |
-| `test_sql_count_users_per_company` | Количество пользователей в каждой компании (GROUP BY) | 📋 планируется |
-| `test_sql_users_without_company` | Пользователи без компании (LEFT JOIN) | 📋 планируется |
-| `test_sql_aggregate_active_companies` | Агрегация: активные компании и пользователи в них | 📋 планируется |
 
 ### /api/companies и /{id}
 
@@ -210,6 +185,25 @@ BASE_URL = https://restapi.tech/api
 
 ---
 
+## 🎯 CI/CD
+
+При каждом пуше в ветку main запускается GitHub Actions:
+
+1. Установка зависимостей
+
+2. Запуск всех тестов
+
+3. Генерация Allure-отчёта
+
+4. Отправка результата в Telegram
+
+---
+
+## 🐳 Результаты тестов в Docker
+![Результаты Docker](assets/docker_result.png)
+
+---
+
 ## 📸 Результаты тестов
 
 ![Результаты pytest](assets/pytest_result.png)
@@ -219,16 +213,6 @@ BASE_URL = https://restapi.tech/api
 ## 📊 Allure-отчёт
 
 ![Allure-отчёт](assets/allure-report.png)
-
----
-
-## 📋 Примечания
-
-1. Перед запуском тестов убедитесь, что API доступно по указанному BASE_URL.
-
-2. Для Postman тестов проверьте актуальность переменных окружения.
-
-3. При изменении эндпоинтов обновите соответствующие тест‑кейсы в test-cases/.
 
 ---
 
