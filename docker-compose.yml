@@ -10,7 +10,6 @@ services:
     command: pytest tests/ -m smoke -v
     volumes:
       - ./allure-results:/app/allure-results
-      - ./allure-report:/app/allure-report
 
   allure:
     build: .
