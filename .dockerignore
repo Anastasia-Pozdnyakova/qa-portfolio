@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+.pytest_cache
+
+# IDE
+.vscode
+
+# Отчёты и кэш
+allure-report
+allure-results
+reports
+
+# Документация
+README.md
+TEMPLATES.md
+DOCKER_NOTES.md
+LICENSE
+test-cases
+postman
+assets
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# База данных
+*.db
