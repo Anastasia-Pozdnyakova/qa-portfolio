@@ -2,48 +2,19 @@ name: Run API Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: ["**"]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  # schedule:
+  #   - cron: '0 2 * * *' # Ночной регресс (пока отключен)
 
 jobs:
-  test:
+  smoke-tests:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          pip install pytest requests allure-pytest pytest-rerunfailures
-
-      - name: Run tests
-        run: pytest tests/ -v --alluredir=allure-results
-
-      - name: Install Allure
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip
-          wget https://github.com/allure-framework/allure2/releases/download/2.32.0/allure-2.32.0.zip
-          unzip allure-2.32.0.zip
-          sudo mv allure-2.32.0 /opt/allure
-          sudo ln -s /opt/allure/bin/allure /usr/local/bin/allure
-          allure --version
-
-      - name: Generate Allure report
-        run: allure generate allure-results -o allure-report --clean
-
-      - name: Upload Allure report
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-report
-          path: allure-report
-
+      - name: Run smoke tests in Docker
+        run: docker compose run --rm smoke
       - name: Send Telegram notification
         if: always()
         uses: appleboy/telegram-action@master
@@ -51,8 +22,33 @@ jobs:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            🧪 Тесты завершены!
+            🟡 Smoke-тесты завершены!
             Статус: ${{ job.status }}
             Репозиторий: ${{ github.repository }}
             Ветка: ${{ github.ref_name }}
-            Автор: ${{ github.actor }}
+
+  regression-tests:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run all tests in Docker
+        run: docker compose run --rm tests
+      - name: Generate Allure report in Docker
+        run: docker compose run --rm allure
+      - name: Upload Allure report
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
+      - name: Send Telegram notification
+        if: always()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            🟢 Регресс-тесты завершены!
+            Статус: ${{ job.status }}
+            Репозиторий: ${{ github.repository }}
+            Ветка: ${{ github.ref_name }}
