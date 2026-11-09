@@ -2,7 +2,7 @@ name: Run API Tests
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
     branches: [main]
   # schedule:
@@ -22,10 +22,13 @@ jobs:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            🟡 Smoke-тесты завершены!
-            Статус: ${{ job.status }}
+            ${{ job.status == 'success' && '✅' || '❌' }} Smoke-тесты: ${{ job.status }}
             Репозиторий: ${{ github.repository }}
             Ветка: ${{ github.ref_name }}
+            Триггер: ${{ github.event_name }}
+            Автор: ${{ github.actor }}
+            № запуска пайплайна: ${{ github.run_number }}
+            Ссылка на пайплайн: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   regression-tests:
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
@@ -48,7 +51,10 @@ jobs:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            🟢 Регресс-тесты завершены!
-            Статус: ${{ job.status }}
+            ${{ job.status == 'success' && '✅' || '❌' }} Регресс-тесты: ${{ job.status }}
             Репозиторий: ${{ github.repository }}
             Ветка: ${{ github.ref_name }}
+            Триггер: ${{ github.event_name }}
+            Автор: ${{ github.actor }}
+            № запуска пайплайна: ${{ github.run_number }}
+            Ссылка на пайплайн: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
