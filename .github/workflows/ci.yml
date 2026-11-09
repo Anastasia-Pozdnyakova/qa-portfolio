@@ -21,6 +21,7 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
+          disable_web_page_preview: true
           message: |
             ${{ job.status == 'success' && '✅' || '❌' }} Smoke-тесты: ${{ job.status }}
             Репозиторий: ${{ github.repository }}
@@ -28,7 +29,7 @@ jobs:
             Триггер: ${{ github.event_name }}
             Автор: ${{ github.actor }}
             № запуска пайплайна: ${{ github.run_number }}
-            Ссылка на пайплайн: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Пайплайн: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   regression-tests:
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
@@ -50,6 +51,7 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
+          disable_web_page_preview: true
           message: |
             ${{ job.status == 'success' && '✅' || '❌' }} Регресс-тесты: ${{ job.status }}
             Репозиторий: ${{ github.repository }}
@@ -57,4 +59,4 @@ jobs:
             Триггер: ${{ github.event_name }}
             Автор: ${{ github.actor }}
             № запуска пайплайна: ${{ github.run_number }}
-            Ссылка на пайплайн: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Пайплайн: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
