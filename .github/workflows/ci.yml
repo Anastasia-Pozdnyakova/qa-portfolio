@@ -32,9 +32,9 @@ jobs:
             № пайплайна: ${{ github.run_number }}
             Пайплайн: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-  # REGRESSION — запускается пока только вручную, по расписанию – надо раскомментить schedule
+  # REGRESSION — запускается вручную (кнопкой) или по расписанию
   regression-tests:
-    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
