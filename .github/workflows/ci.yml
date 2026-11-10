@@ -10,6 +10,7 @@ on:
 jobs:
   # SMOKE — запускается при создании Pull Request
   smoke-tests:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +24,7 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           disable_web_page_preview: true
           message: |
-            ${{ job.status == 'success' && '✅' || '❌' }} 🎯 Smoke-тесты: ${{ job.status }}
+            ${{ job.status == 'success' && '✅' || (job.status == 'skipped' && '⏭️' || '❌') }} 💨 Smoke-тесты: ${{ job.status }}
             Репозиторий: ${{ github.repository }}
             Ветка: ${{ github.ref_name }}
             Триггер: ${{ github.event_name }}
@@ -54,7 +55,7 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           disable_web_page_preview: true
           message: |
-            ${{ job.status == 'success' && '✅' || '❌' }} 📦 Регресс-тесты: ${{ job.status }}
+            ${{ job.status == 'success' && '✅' || (job.status == 'skipped' && '⏭️' || '❌') }} 🔁 Регресс-тесты: ${{ job.status }}
             Репозиторий: ${{ github.repository }}
             Ветка: ${{ github.ref_name }}
             Триггер: ${{ github.event_name }}
